@@ -7,6 +7,6 @@ class HelloTest {
 
     @Test
     fun helloTest() {
-        Assert.assertEquals("Hello does not match", "Hello", hello())
+        Assert.assertEquals("Hello does not match", "Helló", hello())
     }
 }
