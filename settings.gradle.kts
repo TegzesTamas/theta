@@ -5,6 +5,7 @@ include(
         "cfa",
         "cfa2dot",
         "cfa-analysis",
+        "cfa-analysis-chc",
         "cfa-cli",
         "cfa-metrics",
         "common",
