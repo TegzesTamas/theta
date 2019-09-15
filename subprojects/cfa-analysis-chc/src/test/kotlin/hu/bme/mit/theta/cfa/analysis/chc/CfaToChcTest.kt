@@ -37,7 +37,7 @@ class HelloTest {
 
         val solver = Z3SolverFactory.getInstace().createSolver()
         solver.push()
-        solver.add(PathUtils.unfold(chcs[0].getExpr(), 0))
+        solver.add(PathUtils.unfold(chcs[0].expr, 0))
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs[0]}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
