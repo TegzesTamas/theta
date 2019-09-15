@@ -105,12 +105,17 @@ private fun findLoopsinSCCs(sccs: List<Set<CFA.Loc>>): List<CfaLoop> {
         val locSet = setsToProcess.removeAt(setsToProcess.lastIndex)
         val exitNodes = locSet.filter { it.outEdges.any { it.target !in locSet } }
         when (exitNodes.size) {
-            0 -> return emptyList()
+            0 -> {
+            }
             1 -> {
                 val exitNode = exitNodes[0]
-                loops += NormalCfaLoop(exitNode, locSet)
-                val locSubset = locSet.subtract(listOf(exitNode))
-                setsToProcess += findSCCs(locSubset)
+                if (exitNode.outEdges.any { it.target in locSet }) {
+                    loops += NormalCfaLoop(exitNode, locSet)
+                    val locSubset = locSet.subtract(listOf(exitNode))
+                    if (locSubset.isNotEmpty()) {
+                        setsToProcess += findSCCs(locSubset)
+                    }
+                }
             }
             else -> throw IllegalArgumentException("Program structure does not allow translation to CHC.")
 
