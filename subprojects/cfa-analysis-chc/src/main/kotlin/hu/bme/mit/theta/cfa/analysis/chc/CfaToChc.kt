@@ -144,7 +144,7 @@ private fun findPathsBetweenLoops(loops: List<CfaLoop>): List<CfaStructureEdge> 
 
 fun cfaToChc(cfa: CFA): List<CHC> {
     val sccs = findSCCs(cfa.locs.toSet())
-    val loops = findLoopsinSCCs(sccs) + InitOrGoalLoop(cfa.initLoc, setOf(cfa.initLoc)) + InitOrGoalLoop(cfa.finalLoc, setOf(cfa.finalLoc))
+    val loops = findLoopsinSCCs(sccs) + InitOrGoalLoop(cfa.initLoc, setOf(cfa.initLoc)) + InitOrGoalLoop(cfa.errorLoc, setOf(cfa.errorLoc))
     val paths = findPathsBetweenLoops(loops)
     return paths.map { it.toCHC() }
 
