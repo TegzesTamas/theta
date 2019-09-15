@@ -41,4 +41,41 @@ class CfaToChcTest {
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs[0]}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
+
+    @Test
+    fun multipathLooplessProgramTest() {
+        val cfaBuilder = CFA.builder()
+        val initLoc = cfaBuilder.createLoc("init")
+        cfaBuilder.initLoc = initLoc
+        val errorLoc = cfaBuilder.createLoc("error")
+        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.errorLoc = errorLoc
+
+        val leftLoc = cfaBuilder.createLoc("left")
+        val rightLoc = cfaBuilder.createLoc("right")
+
+        val x = DeclManager.getVar("CfaToCHCTest_loopless_parallel_x", IntExprs.Int())
+        val y = DeclManager.getVar("CfaToCHCTest_loopless_parallel_y", IntExprs.Int())
+
+
+        cfaBuilder.createEdge(initLoc, leftLoc, AssignStmt.of(x, IntExprs.Int(0)))
+        cfaBuilder.createEdge(leftLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
+
+        cfaBuilder.createEdge(initLoc, rightLoc, AssignStmt.of(y, IntExprs.Int(0)))
+        cfaBuilder.createEdge(rightLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(y.ref, IntExprs.Int(0))))
+
+
+        val cfa = cfaBuilder.build()
+        val chcs = cfaToChc(cfa)
+
+        Assert.assertEquals("Incorrect number of chc: $chcs", 2, chcs.size)
+
+        val solver = Z3SolverFactory.getInstace().createSolver()
+        for (chc in chcs) {
+            solver.push()
+            solver.add(PathUtils.unfold(chc.expr, 0))
+            Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: $chc", SolverStatus.UNSAT, solver.check())
+            solver.pop()
+        }
+    }
 }
