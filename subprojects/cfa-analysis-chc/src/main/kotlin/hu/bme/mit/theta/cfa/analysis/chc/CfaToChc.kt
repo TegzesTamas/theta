@@ -36,7 +36,7 @@ fun findSCCs(usedLocs: Set<CFA.Loc>): List<Set<CFA.Loc>> {
     data class TarjanData(val index: Int, var lowlink: Int, var onStack: Boolean)
     data class DFSStackEntry(val loc: CFA.Loc, var nextSuccIndex: Int = 0)
 
-    val sccs = mutableListOf(setOf<CFA.Loc>())
+    val sccs = mutableListOf<Set<CFA.Loc>>()
 
     val tarjanStack: MutableList<CFA.Loc> = mutableListOf()
     val dfsStack: Deque<DFSStackEntry> = ArrayDeque()
