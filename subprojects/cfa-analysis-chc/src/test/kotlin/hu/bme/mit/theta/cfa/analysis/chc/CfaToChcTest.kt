@@ -12,7 +12,7 @@ import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import org.junit.Assert
 import org.junit.Test
 
-class HelloTest {
+class CfaToChcTest {
 
     @Test
     fun LooplessProgramTest() {
