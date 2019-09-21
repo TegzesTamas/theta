@@ -5,4 +5,4 @@ jdk:
 
 install: true
 
-script: ./gradlew :theta-cfa-cli:check
+script: ./gradlew :theta-cfa-analysis-chc:check
