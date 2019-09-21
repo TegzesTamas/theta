@@ -8,55 +8,59 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.VarIndexing
 
-abstract class CHC(val body: Expr<BoolType>) {
-    open val postIndexing: VarIndexing = VarIndexing.all(0)
-    abstract val expr: Expr<BoolType>
-    abstract val preInvRef: Expr<BoolType>
-    abstract val postInvRef: Expr<BoolType>
-    abstract val invariantsToFind: Set<VarDecl<BoolType>>
+interface CHC {
+    val body: Expr<BoolType>
+    val postIndexing: VarIndexing
+    val expr: Expr<BoolType>
+    val preInvRef: Expr<BoolType>
+    val postInvRef: Expr<BoolType>
+    val invariantsToFind: Set<VarDecl<BoolType>>
+    override fun toString(): String
 }
 
-class Fact(body: Expr<BoolType>, override val postIndexing: VarIndexing, val postInv: VarDecl<BoolType>) : CHC(body) {
+data class Fact(override val body: Expr<BoolType>, override val postIndexing: VarIndexing, val postInv: VarDecl<BoolType>) : CHC {
     override val preInvRef: Expr<BoolType>
         get() = BoolExprs.True()
-
     override val postInvRef: Expr<BoolType>
         get() = postInv.ref
-
     override val expr: AndExpr
         get() = BoolExprs.And(body, BoolExprs.Not(PrimeExpr.of(postInv.ref)))
-
     override val invariantsToFind: Set<VarDecl<BoolType>>
         get() = setOf(postInv)
+
+    override fun toString(): String = "CHC(($body) -> $postInv)"
 }
 
-class Query(val preInv: VarDecl<BoolType>, body: Expr<BoolType>) : CHC(body) {
+data class Query(val preInv: VarDecl<BoolType>, override val body: Expr<BoolType>, override val postIndexing: VarIndexing) : CHC {
     override val expr: Expr<BoolType>
         get() = BoolExprs.And(preInv.ref, body)
-
     override val preInvRef: Expr<BoolType>
         get() = preInv.ref
-
     override val postInvRef: Expr<BoolType>
         get() = BoolExprs.False()
-
     override val invariantsToFind: Set<VarDecl<BoolType>>
         get() = setOf(preInv)
+
+    override fun toString(): String = "CHC($preInv and ($body) -> false)"
 }
 
-class InductiveClause(val preInv: VarDecl<BoolType>, body: Expr<BoolType>, override val postIndexing: VarIndexing, val postInv: VarDecl<BoolType>) : CHC(body) {
+data class InductiveClause(val preInv: VarDecl<BoolType>,
+                           override val body: Expr<BoolType>,
+                           override val postIndexing: VarIndexing,
+                           val postInv: VarDecl<BoolType>) : CHC {
     override val preInvRef: Expr<BoolType>
         get() = preInv.ref
     override val postInvRef: Expr<BoolType>
         get() = postInv.ref
     override val expr: Expr<BoolType>
         get() = BoolExprs.And(preInv.ref, body, BoolExprs.Not(PrimeExpr.of(postInv.ref)))
-
     override val invariantsToFind: Set<VarDecl<BoolType>>
         get() = setOf(preInv, postInv)
+
+    override fun toString(): String = "CHC($preInv and ($body) -> $postInv)"
 }
 
-class SimpleCHC(body: Expr<BoolType>) : CHC(body) {
+data class SimpleCHC(override val body: Expr<BoolType>, override val postIndexing: VarIndexing) : CHC {
     override val expr: Expr<BoolType>
         get() = body
     override val preInvRef: Expr<BoolType>
@@ -65,4 +69,14 @@ class SimpleCHC(body: Expr<BoolType>) : CHC(body) {
         get() = BoolExprs.False()
     override val invariantsToFind: Set<VarDecl<BoolType>>
         get() = setOf()
+
+    override fun toString(): String = "CHC(($body) -> false)"
+}
+
+data class CHCSystem(val invarToCHC: Map<VarDecl<BoolType>?, List<CHC>>) {
+    val chcs: Set<CHC> by lazy { invarToCHC.entries.flatMap { it.value }.toSet() }
+    val invariants: Set<VarDecl<BoolType>> by lazy {
+        val nonNull = mutableSetOf<VarDecl<BoolType>>()
+        invarToCHC.keys.filterNotNullTo(nonNull)
+    }
 }

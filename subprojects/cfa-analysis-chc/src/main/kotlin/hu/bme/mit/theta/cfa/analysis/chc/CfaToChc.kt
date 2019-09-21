@@ -2,7 +2,9 @@ package hu.bme.mit.theta.cfa.analysis.chc
 
 import hu.bme.mit.theta.cfa.CFA
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
+import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
+import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.StmtUtils
 import hu.bme.mit.theta.core.utils.VarIndexing
 import java.util.*
@@ -11,25 +13,31 @@ import kotlin.math.min
 
 
 private data class CfaStructureEdge(val source: CfaLoop, val target: CfaLoop, val edges: List<CFA.Edge>) {
-    fun toCHC(): CHC {
+    fun toCHCMapEntries(): List<Pair<VarDecl<BoolType>?, CHC>> {
         val stmtUnfoldResult = StmtUtils.toExpr(edges.map { it.stmt }, VarIndexing.all(0))
         val body = BoolExprs.And(stmtUnfoldResult.exprs)
         val nextIndexing = stmtUnfoldResult.indexing
         return when {
-            source is InitOrGoalLoop && target is InitOrGoalLoop -> SimpleCHC(body)
-            source is InitOrGoalLoop && target is NormalCfaLoop -> Fact(body, nextIndexing, target.invariant)
-            source is NormalCfaLoop && target is InitOrGoalLoop -> Query(source.invariant, body)
-            source is NormalCfaLoop && target is NormalCfaLoop -> InductiveClause(source.invariant, body, nextIndexing, target.invariant)
+            source is InitOrGoalLoop && target is InitOrGoalLoop -> listOf(null to SimpleCHC(body, nextIndexing))
+            source is InitOrGoalLoop && target is NormalCfaLoop -> listOf(target.invariant to Fact(body, nextIndexing, target.invariant))
+            source is NormalCfaLoop && target is InitOrGoalLoop -> listOf(source.invariant to Query(source.invariant, body, nextIndexing))
+            source is NormalCfaLoop && target is NormalCfaLoop -> {
+                val chc = InductiveClause(source.invariant, body, nextIndexing, target.invariant)
+                listOf(source.invariant to chc, target.invariant to chc)
+            }
             else -> throw AssertionError("Unknown CfaLoop type. Source: $source, Target:$target")
         }
     }
 }
 
-private abstract class CfaLoop(val exitLoc: CFA.Loc, val locSet: Set<CFA.Loc>)
+private interface CfaLoop {
+    val exitLoc: CFA.Loc
+    val locSet: Set<CFA.Loc>
+}
 
-private class InitOrGoalLoop(exitLoc: CFA.Loc, locSet: Set<CFA.Loc>) : CfaLoop(exitLoc, locSet)
-private class NormalCfaLoop(exitLoc: CFA.Loc, locSet: Set<CFA.Loc>) : CfaLoop(exitLoc, locSet) {
-    val invariant = DeclManager.getVar("chc_loop_invar", BoolExprs.Bool())
+private data class InitOrGoalLoop(override val exitLoc: CFA.Loc, override val locSet: Set<CFA.Loc>) : CfaLoop
+private data class NormalCfaLoop(override val exitLoc: CFA.Loc, override val locSet: Set<CFA.Loc>) : CfaLoop {
+    val invariant = DeclManager.getVar("invar", BoolExprs.Bool())
 }
 
 fun findSCCs(usedLocs: Set<CFA.Loc>): List<Set<CFA.Loc>> {
@@ -147,10 +155,16 @@ private fun findPathsBetweenLoops(loops: List<CfaLoop>): List<CfaStructureEdge> 
     return structureEdges
 }
 
-fun cfaToChc(cfa: CFA): List<CHC> {
+fun cfaToChc(cfa: CFA): CHCSystem {
     val sccs = findSCCs(cfa.locs.toSet())
     val loops = findLoopsinSCCs(sccs) + InitOrGoalLoop(cfa.initLoc, setOf(cfa.initLoc)) + InitOrGoalLoop(cfa.errorLoc, setOf(cfa.errorLoc))
     val paths = findPathsBetweenLoops(loops)
-    return paths.map { it.toCHC() }
-
+    val map = mutableMapOf<VarDecl<BoolType>?, List<CHC>>()
+    for (path in paths) {
+        val newEntries = path.toCHCMapEntries()
+        for (entry in newEntries) {
+            map.merge(entry.first, listOf(entry.second)) { t, u -> t + u }
+        }
+    }
+    return CHCSystem(map)
 }

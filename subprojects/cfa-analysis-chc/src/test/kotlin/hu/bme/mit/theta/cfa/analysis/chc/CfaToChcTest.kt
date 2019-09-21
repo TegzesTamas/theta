@@ -4,6 +4,7 @@ import hu.bme.mit.theta.cfa.CFA
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.stmt.AssignStmt
 import hu.bme.mit.theta.core.stmt.AssumeStmt
+import hu.bme.mit.theta.core.stmt.Stmts
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntNeqExpr
@@ -33,13 +34,13 @@ class CfaToChcTest {
 
         val cfa = cfaBuilder.build()
 
-        val chcs = cfaToChc(cfa)
+        val chcs = cfaToChc(cfa).chcs
         Assert.assertEquals("Too many chcs: $chcs", 1, chcs.size)
 
         val solver = Z3SolverFactory.getInstace().createSolver()
         solver.push()
-        solver.add(PathUtils.unfold(chcs[0].expr, 0))
-        Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs[0]}", SolverStatus.UNSAT, solver.check())
+        solver.add(PathUtils.unfold(chcs.first().expr, 0))
+        Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs.first()}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
 
@@ -67,7 +68,7 @@ class CfaToChcTest {
 
 
         val cfa = cfaBuilder.build()
-        val chcs = cfaToChc(cfa)
+        val chcs = cfaToChc(cfa).chcs
 
         Assert.assertEquals("Incorrect number of chc: $chcs", 2, chcs.size)
 
@@ -104,7 +105,7 @@ class CfaToChcTest {
 
 
         val cfa = cfaBuilder.build()
-        val chcs = cfaToChc(cfa)
+        val chcs = cfaToChc(cfa).chcs
 
         Assert.assertEquals("Incorrect number of chc: $chcs", 4, chcs.size)
 
@@ -147,7 +148,8 @@ class CfaToChcTest {
 
         val cfa = cfaBuilder.build()
 
-        val chcs = cfaToChc(cfa)
+        val chcSystem = cfaToChc(cfa)
+        val chcs = chcSystem.chcs
 
 
         val solver = Z3SolverFactory.getInstace().createSolver()
@@ -159,7 +161,7 @@ class CfaToChcTest {
         }
 
         Assert.assertEquals("Incorrect number of chcs: $chcs", 3, chcs.size)
-        val invariants = chcs.flatMap { it.invariantsToFind }.toSet()
+        val invariants = chcSystem.invariants
 
         Assert.assertEquals("Incorrect number of loop invariants: $invariants", 1, invariants.size)
         val invariantExpr = IntExprs.Eq(x.ref, IntExprs.Int(0))
@@ -173,5 +175,40 @@ class CfaToChcTest {
             Assert.assertEquals("CHC satisfiable with bound invariant that should prove safety", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
+    }
+
+    @Test
+    fun multiplePathsMultipleLoopsSafeTest() {
+        val cfaBuilder = CFA.builder()
+        val initLoc = cfaBuilder.createLoc("init")
+        cfaBuilder.initLoc = initLoc
+        val errorLoc = cfaBuilder.createLoc("error")
+        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.errorLoc = errorLoc
+
+        val e = cfaBuilder.createLoc("e")
+        val a = cfaBuilder.createLoc("a")
+        val b = cfaBuilder.createLoc("b")
+        val c = cfaBuilder.createLoc("c")
+        val d = cfaBuilder.createLoc("d")
+
+        cfaBuilder.createEdge(initLoc, e, Stmts.Skip())
+        cfaBuilder.createEdge(e, a, Stmts.Skip())
+        cfaBuilder.createEdge(a, c, Stmts.Skip())
+        cfaBuilder.createEdge(c, c, Stmts.Skip())
+        cfaBuilder.createEdge(c, d, Stmts.Skip())
+        cfaBuilder.createEdge(e, b, Stmts.Skip())
+        cfaBuilder.createEdge(b, d, Stmts.Skip())
+        cfaBuilder.createEdge(d, e, Stmts.Skip())
+        cfaBuilder.createEdge(d, errorLoc, Stmts.Assume(BoolExprs.False()))
+
+        val cfa = cfaBuilder.build()
+        val chcSystem = cfaToChc(cfa)
+        val chcs = chcSystem.chcs
+        Assert.assertEquals("Incorrect number of chcs", 7, chcs.size)
+
+        val invariants = chcs.flatMap { it.invariantsToFind }.toSet()
+        Assert.assertEquals("Incorrect number of invariants", 2, invariants.size)
+
     }
 }
