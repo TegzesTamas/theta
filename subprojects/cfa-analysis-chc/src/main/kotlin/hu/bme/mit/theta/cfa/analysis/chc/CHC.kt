@@ -1,104 +1,86 @@
 package hu.bme.mit.theta.cfa.analysis.chc
 
-import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.type.Expr
-import hu.bme.mit.theta.core.type.anytype.PrimeExpr
-import hu.bme.mit.theta.core.type.booltype.AndExpr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.PathUtils
 import hu.bme.mit.theta.core.utils.VarIndexing
 import hu.bme.mit.theta.solver.Solver
 
-data class CHCSystem(val invarToCHC: Map<VarDecl<BoolType>?, List<CHC>>) {
+data class CHCSystem(val invarToCHC: Map<CfaLoop?, List<CHC>>) {
     val chcs: Set<CHC> by lazy { invarToCHC.entries.flatMap { it.value }.toSet() }
-    val invariants: Set<VarDecl<BoolType>> by lazy {
-        val nonNull = mutableSetOf<VarDecl<BoolType>>()
+    val invariants: Set<CfaLoop> by lazy {
+        val nonNull = mutableSetOf<CfaLoop>()
         invarToCHC.keys.filterNotNullTo(nonNull)
     }
 }
 
-fun Solver.addCHC(chc: CHC, candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType> = BoolExprs.True()) {
+fun Solver.addCHC(chc: CHC, candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType> = BoolExprs.True()) {
     add(chc.solverExpr(candidates, default))
 }
 
 interface CHC {
     val body: Expr<BoolType>
     val postIndexing: VarIndexing
-    val expr: Expr<BoolType>
-    val preInvRef: Expr<BoolType>
-    val postInvRef: Expr<BoolType>
-    val invariantsToFind: Set<VarDecl<BoolType>>
-    fun solverExpr(candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType>
+    val preEndpoint: EdgeEndpoint
+    val postEndpoint: EdgeEndpoint
+    val invariantsToFind: Set<CfaLoop>
+    fun solverExpr(candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType>
 }
 
-data class Fact(override val body: Expr<BoolType>, override val postIndexing: VarIndexing, val postInv: VarDecl<BoolType>) : CHC {
-    override val preInvRef: Expr<BoolType>
-        get() = BoolExprs.True()
-    override val postInvRef: Expr<BoolType>
-        get() = postInv.ref
-    override val expr: AndExpr
-        get() = BoolExprs.And(body, BoolExprs.Not(PrimeExpr.of(postInv.ref)))
-    override val invariantsToFind: Set<VarDecl<BoolType>>
-        get() = setOf(postInv)
+data class Fact(override val preEndpoint: CfaEndpoint,
+                override val body: Expr<BoolType>,
+                override val postIndexing: VarIndexing,
+                override val postEndpoint: CfaLoop) : CHC {
+    override val invariantsToFind: Set<CfaLoop>
+        get() = setOf(postEndpoint)
 
-    override fun solverExpr(candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
+    override fun solverExpr(candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
             BoolExprs.And(PathUtils.unfold(body, 0),
-                    BoolExprs.Not(PathUtils.unfold(candidates[postInv] ?: default, postIndexing)))
+                    BoolExprs.Not(PathUtils.unfold(candidates[postEndpoint] ?: default, postIndexing)))
 
-    override fun toString(): String = "CHC(($body) -> $postInv)"
+    override fun toString(): String = "CHC(($body) -> $postEndpoint)"
 }
 
-data class Query(val preInv: VarDecl<BoolType>, override val body: Expr<BoolType>, override val postIndexing: VarIndexing) : CHC {
-    override val expr: Expr<BoolType>
-        get() = BoolExprs.And(preInv.ref, body)
-    override val preInvRef: Expr<BoolType>
-        get() = preInv.ref
-    override val postInvRef: Expr<BoolType>
-        get() = BoolExprs.False()
-    override val invariantsToFind: Set<VarDecl<BoolType>>
-        get() = setOf(preInv)
+data class Query(override val preEndpoint: CfaLoop,
+                 override val body: Expr<BoolType>,
+                 override val postIndexing: VarIndexing,
+                 override val postEndpoint: CfaEndpoint) : CHC {
+    override val invariantsToFind: Set<CfaLoop>
+        get() = setOf(preEndpoint)
 
-    override fun toString(): String = "CHC($preInv and ($body) -> false)"
+    override fun toString(): String = "CHC($preEndpoint and ($body) -> false)"
 
-    override fun solverExpr(candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
-            BoolExprs.And(PathUtils.unfold(candidates[preInv] ?: default, 0),
+    override fun solverExpr(candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
+            BoolExprs.And(PathUtils.unfold(candidates[preEndpoint] ?: default, 0),
                     PathUtils.unfold(body, 0))
 }
 
-data class InductiveClause(val preInv: VarDecl<BoolType>,
+data class InductiveClause(override val preEndpoint: CfaLoop,
                            override val body: Expr<BoolType>,
                            override val postIndexing: VarIndexing,
-                           val postInv: VarDecl<BoolType>) : CHC {
-    override val preInvRef: Expr<BoolType>
-        get() = preInv.ref
-    override val postInvRef: Expr<BoolType>
-        get() = postInv.ref
-    override val expr: Expr<BoolType>
-        get() = BoolExprs.And(preInv.ref, body, BoolExprs.Not(PrimeExpr.of(postInv.ref)))
-    override val invariantsToFind: Set<VarDecl<BoolType>>
-        get() = setOf(preInv, postInv)
+                           override val postEndpoint: CfaLoop) : CHC {
 
-    override fun toString(): String = "CHC($preInv and ($body) -> $postInv)"
+    override val invariantsToFind: Set<CfaLoop>
+        get() = setOf(preEndpoint, postEndpoint)
 
-    override fun solverExpr(candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
-            BoolExprs.And(PathUtils.unfold(candidates[preInv] ?: default, 0),
+    override fun toString(): String = "CHC($preEndpoint and ($body) -> $postEndpoint)"
+
+    override fun solverExpr(candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
+            BoolExprs.And(PathUtils.unfold(candidates[preEndpoint] ?: default, 0),
                     PathUtils.unfold(body, 0),
-                    BoolExprs.Not(PathUtils.unfold(candidates[postInv] ?: default, postIndexing)))
+                    BoolExprs.Not(PathUtils.unfold(candidates[postEndpoint] ?: default, postIndexing)))
 }
 
-data class SimpleCHC(override val body: Expr<BoolType>, override val postIndexing: VarIndexing) : CHC {
-    override val expr: Expr<BoolType>
-        get() = body
-    override val preInvRef: Expr<BoolType>
-        get() = BoolExprs.True()
-    override val postInvRef: Expr<BoolType>
-        get() = BoolExprs.False()
-    override val invariantsToFind: Set<VarDecl<BoolType>>
+data class SimpleCHC(override val preEndpoint: CfaEndpoint,
+                     override val body: Expr<BoolType>,
+                     override val postIndexing: VarIndexing,
+                     override val postEndpoint: CfaEndpoint) : CHC {
+    override val invariantsToFind: Set<CfaLoop>
         get() = setOf()
 
     override fun toString(): String = "CHC(($body) -> false)"
 
-    override fun solverExpr(candidates: Map<VarDecl<BoolType>, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
+    override fun solverExpr(candidates: Map<CfaLoop, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
             PathUtils.unfold(body, 0)
 }
