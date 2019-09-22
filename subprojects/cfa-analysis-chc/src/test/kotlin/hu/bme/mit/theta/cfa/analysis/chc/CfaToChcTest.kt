@@ -39,7 +39,7 @@ class CfaToChcTest {
 
         val solver = Z3SolverFactory.getInstace().createSolver()
         solver.push()
-        solver.add(PathUtils.unfold(chcs.first().expr, 0))
+        solver.addCHC(chcs.first(), emptyMap())
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs.first()}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
@@ -75,7 +75,7 @@ class CfaToChcTest {
         val solver = Z3SolverFactory.getInstace().createSolver()
         for (chc in chcs) {
             solver.push()
-            solver.add(PathUtils.unfold(chc.expr, 0))
+            solver.addCHC(chc, emptyMap())
             Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -114,7 +114,7 @@ class CfaToChcTest {
         var unsatCount = 0
         for (chc in chcs) {
             solver.push()
-            solver.add(PathUtils.unfold(chc.expr, 0))
+            solver.addCHC(chc, emptyMap())
             when (solver.check()) {
                 SolverStatus.SAT -> ++satCount
                 SolverStatus.UNSAT -> ++unsatCount
@@ -151,27 +151,15 @@ class CfaToChcTest {
         val chcSystem = cfaToChc(cfa)
         val chcs = chcSystem.chcs
 
-
-        val solver = Z3SolverFactory.getInstace().createSolver()
-        for (chc in chcs) {
-            solver.push()
-            solver.add(PathUtils.unfold(chc.expr, 0))
-            Assert.assertEquals("CHC unsatisfiable with unbound invariant: $chc", SolverStatus.SAT, solver.check())
-            solver.pop()
-        }
-
         Assert.assertEquals("Incorrect number of chcs: $chcs", 3, chcs.size)
         val invariants = chcSystem.invariants
-
         Assert.assertEquals("Incorrect number of loop invariants: $invariants", 1, invariants.size)
+
+        val solver = Z3SolverFactory.getInstace().createSolver()
         val invariantExpr = IntExprs.Eq(x.ref, IntExprs.Int(0))
         for (chc in chcs) {
             solver.push()
-            for (invariant in invariants) {
-                solver.add(BoolExprs.Iff(invariant.getConstDecl(0).ref, PathUtils.unfold(invariantExpr, 0)))
-                solver.add(BoolExprs.Iff(invariant.getConstDecl(1).ref, PathUtils.unfold(invariantExpr, chc.postIndexing)))
-            }
-            solver.add(PathUtils.unfold(chc.expr, 0))
+            solver.addCHC(chc, emptyMap(), invariantExpr)
             Assert.assertEquals("CHC satisfiable with bound invariant that should prove safety", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -205,10 +193,18 @@ class CfaToChcTest {
         val cfa = cfaBuilder.build()
         val chcSystem = cfaToChc(cfa)
         val chcs = chcSystem.chcs
-        Assert.assertEquals("Incorrect number of chcs", 7, chcs.size)
 
-        val invariants = chcs.flatMap { it.invariantsToFind }.toSet()
+        Assert.assertEquals("Incorrect number of chcs", 7, chcs.size)
+        val invariants = chcSystem.invariants
         Assert.assertEquals("Incorrect number of invariants", 2, invariants.size)
+
+        val solver = Z3SolverFactory.getInstace().createSolver()
+        for(chc in chcs){
+            solver.push()
+            solver.addCHC(chc, emptyMap())
+            Assert.assertEquals("Simple CHC check error: $chc", SolverStatus.UNSAT, solver.check())
+            solver.pop()
+        }
 
     }
 }
