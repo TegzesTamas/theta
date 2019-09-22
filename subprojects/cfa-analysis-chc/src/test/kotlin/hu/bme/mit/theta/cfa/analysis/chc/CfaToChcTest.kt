@@ -8,7 +8,6 @@ import hu.bme.mit.theta.core.stmt.Stmts
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntNeqExpr
-import hu.bme.mit.theta.core.utils.PathUtils
 import hu.bme.mit.theta.solver.SolverStatus
 import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import org.junit.Assert
