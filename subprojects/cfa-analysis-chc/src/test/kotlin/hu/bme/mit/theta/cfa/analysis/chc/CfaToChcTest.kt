@@ -173,34 +173,45 @@ class CfaToChcTest {
         cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
         cfaBuilder.errorLoc = errorLoc
 
-        val e = cfaBuilder.createLoc("e")
         val a = cfaBuilder.createLoc("a")
         val b = cfaBuilder.createLoc("b")
         val c = cfaBuilder.createLoc("c")
         val d = cfaBuilder.createLoc("d")
 
-        cfaBuilder.createEdge(initLoc, e, Stmts.Skip())
-        cfaBuilder.createEdge(e, a, Stmts.Skip())
-        cfaBuilder.createEdge(a, c, Stmts.Skip())
-        cfaBuilder.createEdge(c, c, Stmts.Skip())
-        cfaBuilder.createEdge(c, d, Stmts.Skip())
-        cfaBuilder.createEdge(e, b, Stmts.Skip())
-        cfaBuilder.createEdge(b, d, Stmts.Skip())
-        cfaBuilder.createEdge(d, e, Stmts.Skip())
-        cfaBuilder.createEdge(d, errorLoc, Stmts.Assume(BoolExprs.False()))
+        val x = DeclManager.getVar("multiPathMultiLoop_x", IntExprs.Int())
+        val y = DeclManager.getVar("multiPathMultiLoop_y", IntExprs.Int())
+
+        cfaBuilder.createEdge(initLoc, a, Stmts.Assign(y, IntExprs.Int(1)))
+        cfaBuilder.createEdge(a, b, Stmts.Assume(IntExprs.Lt(x.ref, y.ref)))
+        cfaBuilder.createEdge(a, c, Stmts.Assume(IntExprs.Gt(x.ref, y.ref)))
+        cfaBuilder.createEdge(a, d, Stmts.Assume(IntExprs.Eq(x.ref, y.ref)))
+        cfaBuilder.createEdge(b, d, Stmts.Assign(y, IntExprs.Sub(y.ref, x.ref)))
+        cfaBuilder.createEdge(c, c, Stmts.Assign(x, IntExprs.Add(x.ref, y.ref)))
+        cfaBuilder.createEdge(c, d, Stmts.Assign(y, x.ref))
+        cfaBuilder.createEdge(d, a, Stmts.Havoc(x))
+        cfaBuilder.createEdge(d, errorLoc, Stmts.Assume(IntExprs.Leq(y.ref, IntExprs.Int(0))))
 
         val cfa = cfaBuilder.build()
         val chcSystem = cfaToChc(cfa)
         val chcs = chcSystem.chcs
 
-        Assert.assertEquals("Incorrect number of chcs", 7, chcs.size)
+        Assert.assertEquals("Incorrect number of chcs", 9, chcs.size)
         val invariants = chcSystem.invariants
         Assert.assertEquals("Incorrect number of invariants", 2, invariants.size)
+        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.exitLoc == c })
+        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.exitLoc == d })
+
+        val candidates = mapOf(
+                CfaLoop(c) to BoolExprs.And(
+                        IntExprs.Gt(x.ref, IntExprs.Int(0)),
+                        IntExprs.Geq(y.ref, IntExprs.Int(0))
+                ),
+                CfaLoop(d) to IntExprs.Gt(y.ref, IntExprs.Int(0)))
 
         val solver = Z3SolverFactory.getInstace().createSolver()
-        for(chc in chcs){
+        for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, emptyMap())
+            solver.addCHC(chc, candidates)
             Assert.assertEquals("Simple CHC check error: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
