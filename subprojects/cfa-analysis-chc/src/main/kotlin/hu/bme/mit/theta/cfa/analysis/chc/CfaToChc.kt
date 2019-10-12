@@ -10,40 +10,48 @@ import kotlin.math.min
 
 
 private data class CfaStructureEdge(val source: EdgeEndpoint, val target: EdgeEndpoint, val internalEdges: List<CFA.Edge>) {
-    fun toCHCMapEntries(): List<Pair<CfaLoop?, CHC>> {
+    fun toCHCSystem(): CHCSystem {
         val stmtUnfoldResult = StmtUtils.toExpr(internalEdges.map { it.stmt }, VarIndexing.all(0))
         val body = BoolExprs.And(stmtUnfoldResult.exprs)
         val nextIndexing = stmtUnfoldResult.indexing
         return when {
             source is CfaEndpoint && target is CfaEndpoint ->
-                if (source.isInit && target.isError)
-                    listOf(null to SimpleCHC(source, body, nextIndexing, target))
-                else emptyList()
+                if (source.isInit && target.isError) {
+                    CHCSystem(simpleCHCs = listOf(SimpleCHC(source, body, nextIndexing, target)))
+                } else CHCSystem()
             source is CfaEndpoint && target is CfaLoop ->
-                if (source.isInit)
-                    listOf(target to Fact(source, body, nextIndexing, target))
-                else emptyList()
+                if (source.isInit) {
+                    CHCSystem(facts = listOf(Fact(source, body, nextIndexing, target)))
+                } else CHCSystem()
             source is CfaLoop && target is CfaEndpoint ->
-                if (target.isError)
-                    listOf(source to Query(source, body, nextIndexing, target))
-                else emptyList()
+                if (target.isError) {
+                    CHCSystem(queries = listOf(Query(source, body, nextIndexing, target)))
+                } else CHCSystem()
             source is CfaLoop && target is CfaLoop -> {
-                val chc = InductiveClause(source, body, nextIndexing, target)
-                listOf(source to chc, target to chc)
+                CHCSystem(inductiveClauses = listOf(InductiveClause(source, body, nextIndexing, target)))
             }
             else -> throw AssertionError("Unknown EdgeEndpoint type. Source: $source, Target:$target")
         }
     }
 }
 
-interface EdgeEndpoint
-
-class CfaEndpoint(val isInit: Boolean) : EdgeEndpoint {
-    val isError: Boolean
-        get() = !isInit
+interface EdgeEndpoint {
+    fun asCfaEndpoint(): CfaEndpoint?
+    fun asCfaLoop(): CfaLoop?
 }
 
-data class CfaLoop(val exitLoc: CFA.Loc) : EdgeEndpoint
+data class CfaEndpoint(val isInit: Boolean) : EdgeEndpoint {
+    val isError: Boolean
+        get() = !isInit
+
+    override fun asCfaEndpoint(): CfaEndpoint? = this
+    override fun asCfaLoop(): CfaLoop? = null
+}
+
+data class CfaLoop(val exitLoc: CFA.Loc) : EdgeEndpoint {
+    override fun asCfaEndpoint(): CfaEndpoint? = null
+    override fun asCfaLoop(): CfaLoop? = this
+}
 
 fun findSCCs(usedLocs: Set<CFA.Loc>): List<Set<CFA.Loc>> {
     data class TarjanData(val index: Int, var lowlink: Int, var onStack: Boolean)
@@ -165,12 +173,5 @@ fun cfaToChc(cfa: CFA): CHCSystem {
     val sccs = findSCCs(cfa.locs.toSet())
     val loops = findLoopsInSCCs(sccs)
     val paths = findPathsBetweenLoops(loops, cfa.initLoc, cfa.errorLoc)
-    val map = mutableMapOf<CfaLoop?, List<CHC>>()
-    for (path in paths) {
-        val newEntries = path.toCHCMapEntries()
-        for (entry in newEntries) {
-            map.merge(entry.first, listOf(entry.second)) { t, u -> t + u }
-        }
-    }
-    return CHCSystem(map)
+    return CHCSystem.mergeAll(paths.map { it.toCHCSystem() })
 }
