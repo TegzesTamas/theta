@@ -13,7 +13,7 @@ import org.junit.Test
 
 class NaiveSolverTest() {
     private val solver: Solver = Z3SolverFactory.getInstace().createSolver()
-    @Test
+    @Test(timeout = 500)
     fun topDownUnsafeTest() {
         val cfaBuilder = CFA.builder()
         val initLoc = cfaBuilder.createLoc("init")
