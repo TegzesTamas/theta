@@ -15,7 +15,7 @@ import org.junit.Test
 
 class CfaToChcTest {
 
-    @Test(timeout = 100)
+    @Test(timeout = 1000)
     fun singlePathLooplessSafeTest() {
         val cfaBuilder = CFA.builder()
         val initLoc = cfaBuilder.createLoc("init")
@@ -43,7 +43,7 @@ class CfaToChcTest {
         solver.pop()
     }
 
-    @Test(timeout = 100)
+    @Test(timeout = 1000)
     fun multiPathLooplessSafeTest() {
         val cfaBuilder = CFA.builder()
         val initLoc = cfaBuilder.createLoc("init")
@@ -80,7 +80,7 @@ class CfaToChcTest {
         }
     }
 
-    @Test(timeout = 100)
+    @Test(timeout = 1000)
     fun multiPathLooplessUnsafeTest() {
 
         val cfaBuilder = CFA.builder()
@@ -127,7 +127,7 @@ class CfaToChcTest {
         Assert.assertEquals("Incorrect number of CHCs unsatisfiable", 2, unsatCount)
     }
 
-    @Test(timeout = 200)
+    @Test(timeout = 2000)
     fun singlePathSingleLoopSafeTest() {
         val cfaBuilder = CFA.builder()
         val initLoc = cfaBuilder.createLoc("init")
@@ -164,7 +164,7 @@ class CfaToChcTest {
         }
     }
 
-    @Test(timeout = 150)
+    @Test(timeout = 2000)
     fun multiplePathsMultipleLoopsSafeTest() {
         val cfaBuilder = CFA.builder()
         val initLoc = cfaBuilder.createLoc("init")
