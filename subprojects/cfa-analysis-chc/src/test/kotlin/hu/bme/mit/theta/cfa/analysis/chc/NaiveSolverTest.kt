@@ -11,7 +11,7 @@ import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import org.junit.Assert
 import org.junit.Test
 
-class NaiveSolverTest() {
+class NaiveSolverTest {
     private val solver: Solver = Z3SolverFactory.getInstace().createSolver()
     @Test(timeout = 5000)
     fun topDownUnsafeTest() {

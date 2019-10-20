@@ -198,15 +198,15 @@ class CfaToChcTest {
         Assert.assertEquals("Incorrect number of chcs", 9, chcs.size)
         val invariants = chcSystem.invariants
         Assert.assertEquals("Incorrect number of invariants", 2, invariants.size)
-        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.exitLoc == c })
-        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.exitLoc == d })
+        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.name == c.name })
+        Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.name == d.name })
 
         val candidates = mapOf(
-                CfaLoop(c) to BoolExprs.And(
+                Invariant(c.name) to BoolExprs.And(
                         IntExprs.Gt(x.ref, IntExprs.Int(0)),
                         IntExprs.Geq(y.ref, IntExprs.Int(0))
                 ),
-                CfaLoop(d) to IntExprs.Gt(y.ref, IntExprs.Int(0)))
+                Invariant(d.name) to IntExprs.Gt(y.ref, IntExprs.Int(0)))
 
         val solver = Z3SolverFactory.getInstace().createSolver()
         for (chc in chcs) {

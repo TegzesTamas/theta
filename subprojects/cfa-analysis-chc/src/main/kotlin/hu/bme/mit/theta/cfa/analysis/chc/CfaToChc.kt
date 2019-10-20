@@ -17,30 +17,30 @@ private data class CfaStructureEdge(val source: EdgeEndpoint, val target: EdgeEn
         return when {
             source is CfaEndpoint && target is CfaEndpoint ->
                 if (source.isInit && target.isError) {
-                    CHCSystem(simpleCHCs = listOf(SimpleCHC(source, body, nextIndexing, target)))
+                    CHCSystem(simpleCHCs = listOf(SimpleCHC(body, nextIndexing)))
                 } else CHCSystem()
             source is CfaEndpoint && target is CfaLoop ->
                 if (source.isInit) {
-                    CHCSystem(facts = listOf(Fact(source, body, nextIndexing, target)))
+                    CHCSystem(facts = listOf(Fact(body, nextIndexing, Invariant(target.exitLoc.name))))
                 } else CHCSystem()
             source is CfaLoop && target is CfaEndpoint ->
                 if (target.isError) {
-                    CHCSystem(queries = listOf(Query(source, body, nextIndexing, target)))
+                    CHCSystem(queries = listOf(Query(Invariant(source.exitLoc.name), body, nextIndexing)))
                 } else CHCSystem()
             source is CfaLoop && target is CfaLoop -> {
-                CHCSystem(inductiveClauses = listOf(InductiveClause(source, body, nextIndexing, target)))
+                CHCSystem(inductiveClauses = listOf(InductiveClause(Invariant(source.exitLoc.name), body, nextIndexing, Invariant(target.exitLoc.name))))
             }
             else -> throw AssertionError("Unknown EdgeEndpoint type. Source: $source, Target:$target")
         }
     }
 }
 
-interface EdgeEndpoint {
+private interface EdgeEndpoint {
     fun asCfaEndpoint(): CfaEndpoint?
     fun asCfaLoop(): CfaLoop?
 }
 
-data class CfaEndpoint(val isInit: Boolean) : EdgeEndpoint {
+private data class CfaEndpoint(val isInit: Boolean) : EdgeEndpoint {
     val isError: Boolean
         get() = !isInit
 
@@ -48,12 +48,12 @@ data class CfaEndpoint(val isInit: Boolean) : EdgeEndpoint {
     override fun asCfaLoop(): CfaLoop? = null
 }
 
-data class CfaLoop(val exitLoc: CFA.Loc) : EdgeEndpoint {
+private data class CfaLoop(val exitLoc: CFA.Loc) : EdgeEndpoint {
     override fun asCfaEndpoint(): CfaEndpoint? = null
     override fun asCfaLoop(): CfaLoop? = this
 }
 
-fun findSCCs(usedLocs: Set<CFA.Loc>): List<Set<CFA.Loc>> {
+private fun findSCCs(usedLocs: Set<CFA.Loc>): List<Set<CFA.Loc>> {
     data class TarjanData(val index: Int, var lowlink: Int, var onStack: Boolean)
     data class DFSStackEntry(val loc: CFA.Loc, var nextSuccIndex: Int = 0)
 
