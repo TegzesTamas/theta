@@ -133,7 +133,7 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: Sequence<Constraint>
                 }
                 filteredConstraints = filteredConstraints
                         .filter { it.target !in forcedTrue }
-                        .map { Constraint(it.source.filter { it in forcedTrue }, it.target) }
+                        .map { Constraint(it.source.filter { it !in forcedTrue }, it.target) }
             } while (forcedTrue.size != prevSize)
             return ConstraintSystem(forcedTrue.filterNotNull().toSet(), filteredConstraints)
         }
