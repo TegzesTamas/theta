@@ -6,8 +6,8 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
 import kotlin.math.abs
 
-class DecisionTree(datapoints: Set<Datapoint>, constraints: Sequence<Constraint>) {
-    private var root: Node = Builder(datapoints, constraints).build(datapoints)
+class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
+    private var root: Node = Builder(constraints).build(datapoints)
 
 
     val candidates: InvariantCandidates
@@ -43,8 +43,8 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: Sequence<Constraint>
         }
     }
 
-    private class Builder(datapoints: Set<Datapoint>, constraints: Sequence<Constraint>) {
-        private val constraints: Sequence<Constraint>
+    private class Builder(constraints: List<Constraint>) {
+        private val constraints: List<Constraint>
         private val forcedTrue: Set<Datapoint>
 
         init {
@@ -55,89 +55,80 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: Sequence<Constraint>
         }
 
         fun build(datapoints: Set<Datapoint>): Node {
-            if (forcedTrue.isEmpty()) {
+            if (datapoints.none { it in forcedTrue }) {
                 return Leaf(false)
             }
             if (forcedTrue.containsAll(datapoints)) {
                 return Leaf(true)
             }
-            val decision = findSplitting(forcedTrue, datapoints)
+            val decision = findSplittingDecision(datapoints)
             val (ifTrue, ifFalse) = datapoints.partition { decision.matchesDatapoint(it) }
             return Branch(decision, build(ifTrue.toSet()), build(ifFalse.toSet()))
         }
 
-        private fun findSplitting(all: Set<Datapoint>, forcedTrue: Set<Datapoint>): Decision {
-            require(all.isNotEmpty()) { "no datapoints given" }
-            require(forcedTrue.isNotEmpty()) { "no splitting necessary" }
-            val allInvariants = all.map { it.invariant }.toMutableSet()
+        private fun findSplittingDecision(datapointsToSplit: Set<Datapoint>): Decision {
+            require(datapointsToSplit.size > 1) { "At least two datapoints needed." }
+            val allInvariants = datapointsToSplit.map { it.invariant }.toMutableSet()
 
             if (allInvariants.size > 1) {
                 val chosenInvariants = allInvariants.take(allInvariants.size / 2).toSet()
                 return InvariantDecision(chosenInvariants)
             }
 
-            val forcedTrueValuations =
-                    forcedTrue.asSequence()
-                            .flatMap { it.valuation.toMap().entries.asSequence() }
-                            .groupBy { it.key }
 
-
-            val targetSplitSize = all.size / 2
-            val variableToValuesMap = all.asSequence()
+            val targetSplitSize = datapointsToSplit.size / 2
+            val variableToDatapointsAndValues = datapointsToSplit.asSequence()
                     .flatMap { datapoint ->
                         datapoint.valuation.toMap()
                                 .asSequence()
-                                .map { entry -> datapoint to entry }
+                                .map { valEntry -> valEntry }
                     }
-                    .groupBy { (_, valEntry) -> valEntry.key }
-            val valueOccurenceCount =
-                    variableToValuesMap
-                            .asSequence()
-                            .map { (variable, valuesInDatapoints) ->
-                                val valuationToOccurrenceCount = valuesInDatapoints
-                                        .groupBy { it.second.value }
-                                        .asSequence()
-                                        .filter { it.value.size > 1 }
-                                        .map { (_, occurrences) ->
-                                            occurrences.first().first.valuation to occurrences.distinctBy { it.first }.count()
-                                        }
-                                variable to valuationToOccurrenceCount.minBy { abs(it.second - targetSplitSize) }
-                            }
-                            .maxBy { abs(it.second?.second ?: 0 - targetSplitSize) }!!
+                    .groupBy({ it.key }, { it.value })
 
-            val valuation = valueOccurenceCount.second!!.first
-            val chosenVariable = valueOccurenceCount.first
-            val mutableValuation = MutableValuation.copyOf(valuation)
-            for (decl in valuation.decls) {
-                if (decl != chosenVariable) {
-                    mutableValuation.remove(decl)
-                }
-            }
+            val variableToValuesToCount =
+                    variableToDatapointsAndValues
+                            .mapValues { (_, values) ->
+                                values.groupingBy { it }
+                                        .eachCount()
+                            }
+            val bestVariableToSplitBy = variableToValuesToCount
+                    .asSequence()
+                    .filter { (_, valueToOccurrences) -> valueToOccurrences.keys.size > 1 }
+                    .minBy { (_, valueToOccurrences) -> valueToOccurrences.keys.size }
+            assert(bestVariableToSplitBy != null)
+            assert(bestVariableToSplitBy!!.value.isNotEmpty())
+            val chosenVariable = bestVariableToSplitBy.key
+            val (chosenValue, _) =
+                    bestVariableToSplitBy.value.asSequence()
+                            .minBy { abs(it.value - targetSplitSize) }!!
+            val mutableValuation = MutableValuation()
+            mutableValuation.put(chosenVariable, chosenValue)
             return VarValueDecision(mutableValuation)
         }
 
-        data class ConstraintSystem(val forcedTrue: Set<Datapoint>, val filteredConstraints: Sequence<Constraint>)
-
-        private fun calcForced(constraints: Sequence<Constraint>): ConstraintSystem? {
-            val forcedTrue = mutableSetOf<Datapoint?>()
-            var filteredConstraints = constraints
-            do {
-                val prevSize = forcedTrue.size
-                forcedTrue.addAll(
-                        filteredConstraints
-                                .filter { it.source.isEmpty() }
-                                .map { it.target }
-                )
-                if (null in forcedTrue) {
-                    return null
-                }
-                filteredConstraints = filteredConstraints
-                        .filter { it.target !in forcedTrue }
-                        .map { Constraint(it.source.filter { it !in forcedTrue }, it.target) }
-            } while (forcedTrue.size != prevSize)
-            return ConstraintSystem(forcedTrue.filterNotNull().toSet(), filteredConstraints)
+        data class ConstraintSystem(val forcedTrue: Set<Datapoint>, val filteredConstraints: List<Constraint>)
+        companion object {
+            private fun calcForced(constraints: List<Constraint>): ConstraintSystem? {
+                val forcedTrue = mutableSetOf<Datapoint?>()
+                var filteredConstraints = constraints
+                do {
+                    val prevSize = forcedTrue.size
+                    forcedTrue.addAll(
+                            filteredConstraints
+                                    .filter { it.source.isEmpty() }
+                                    .map { it.target }
+                    )
+                    if (null in forcedTrue) {
+                        return null
+                    }
+                    filteredConstraints = filteredConstraints
+                            .filter { it.target !in forcedTrue }
+                            .map { c -> Constraint(c.source.filter { dp -> dp !in forcedTrue }, c.target) }
+                } while (forcedTrue.size != prevSize)
+                return ConstraintSystem(forcedTrue.filterNotNull().toSet(), filteredConstraints)
+            }
         }
     }
 
-    class ContradictoryException(s: String) : Throwable()
+    class ContradictoryException(s: String? = null) : Throwable(s)
 }
