@@ -60,4 +60,36 @@ internal class DecisionTreeTest {
         Assert.assertEquals(1, notConstantOps.size)
         Assert.assertEquals(Eq(x.ref, Int(12)), notConstantOps.first())
     }
+
+
+    @Test
+    fun splitByInvariantTest() {
+        val valuationA = MutableValuation()
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        valuationA.put(x, Int(120))
+        valuationA.put(y, Int(660))
+        val invariantA = Invariant("A")
+        val dpA = Datapoint(invariantA, valuationA)
+
+        val valuationB = MutableValuation()
+        valuationB.put(x, Int(120))
+        valuationB.put(y, Int(660))
+        val invariantB = Invariant("B")
+        val dpB = Datapoint(invariantB, valuationB)
+
+        val constraints = listOf(
+                Constraint(emptyList(), dpA),
+                Constraint(listOf(dpB), null)
+        )
+
+        val tree = DecisionTree(setOf(dpA, dpB), constraints)
+        val exprA = tree.candidates.getExpr(invariantA)
+        val exprB = tree.candidates.getExpr(invariantB)
+        Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
+        Assert.assertEquals(1, exprA.arity)
+        Assert.assertEquals(0, exprB.arity)
+        val notConstantOps = exprA.ops.first().ops.filter { it != True() }
+        Assert.assertEquals(0, notConstantOps.size)
+    }
 }
