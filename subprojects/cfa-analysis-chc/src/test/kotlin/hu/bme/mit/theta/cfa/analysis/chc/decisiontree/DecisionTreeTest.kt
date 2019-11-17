@@ -32,7 +32,7 @@ internal class DecisionTreeTest {
     }
 
     @Test
-    fun basicTest() {
+    fun splitByVariableValueTest() {
         val valuationA = MutableValuation()
         val x = DeclManager.getVar("x", Int())
         val y = DeclManager.getVar("y", Int())
