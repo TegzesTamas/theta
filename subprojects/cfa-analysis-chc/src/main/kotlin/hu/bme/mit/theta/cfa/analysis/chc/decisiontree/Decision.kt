@@ -1,7 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc.decisiontree
 
+import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
-import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.AndExpr
@@ -11,31 +11,31 @@ import hu.bme.mit.theta.core.type.booltype.BoolType
 
 interface Decision {
     fun matchesDatapoint(datapoint: Datapoint): Boolean
-    fun transformCandidates(ifTrue: InvariantCandidates, ifFalse: InvariantCandidates): InvariantCandidates
+    fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates
 }
 
 data class InvariantDecision(val matching: Set<Invariant>) : Decision {
     override fun matchesDatapoint(datapoint: Datapoint) = datapoint.invariant in matching
-    override fun transformCandidates(ifTrue: InvariantCandidates, ifFalse: InvariantCandidates): InvariantCandidates {
+    override fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates {
         val invariants = matching.toMutableSet()
         val candidateMap = mutableMapOf<Invariant, List<AndExpr>>()
         invariants += ifTrue.candidateMap.keys
         invariants += ifFalse.candidateMap.keys
         for (invariant in invariants) {
             if (invariant in matching) {
-                candidateMap[invariant] = ifTrue[invariant]
+                candidateMap[invariant] = ifTrue.getOperators(invariant)
             } else {
-                candidateMap[invariant] = ifFalse[invariant]
+                candidateMap[invariant] = ifFalse.getOperators(invariant)
             }
         }
-        return InvariantCandidates(ifFalse.default, candidateMap)
+        return CNFCandidates(ifFalse.default, candidateMap)
     }
 }
 
 data class VarValueDecision(val valuation: Valuation) : Decision {
     override fun matchesDatapoint(datapoint: Datapoint) = datapoint.valuation.isLeq(valuation)
 
-    override fun transformCandidates(ifTrue: InvariantCandidates, ifFalse: InvariantCandidates): InvariantCandidates {
+    override fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates {
         val invariants = mutableSetOf<Invariant>()
         invariants += ifTrue.candidateMap.keys
         invariants += ifFalse.candidateMap.keys
@@ -43,9 +43,9 @@ data class VarValueDecision(val valuation: Valuation) : Decision {
         val trueExpr = valuation.toExpr()
         val falseExpr = BoolExprs.Not(valuation.toExpr())
         for (invariant in invariants) {
-            candidateMap[invariant] = ifTrue[invariant].andAlso(trueExpr) + ifFalse[invariant].andAlso(falseExpr)
+            candidateMap[invariant] = ifTrue.getOperators(invariant).andAlso(trueExpr) + ifFalse.getOperators(invariant).andAlso(falseExpr)
         }
-        return InvariantCandidates(
+        return CNFCandidates(
                 ifTrue.default.andAlso(trueExpr) + ifFalse.default.andAlso(falseExpr),
                 candidateMap
         )

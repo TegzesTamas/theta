@@ -5,7 +5,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.stmt.AssignStmt
 import hu.bme.mit.theta.core.stmt.AssumeStmt
 import hu.bme.mit.theta.core.stmt.Stmts
-import hu.bme.mit.theta.core.type.booltype.BoolExprs
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntNeqExpr
 import hu.bme.mit.theta.solver.SolverStatus
@@ -38,7 +39,7 @@ class CfaToChcTest {
 
         val solver = Z3SolverFactory.getInstace().createSolver()
         solver.push()
-        solver.addCHC(chcs.first(), emptyMap())
+        solver.addCHC(chcs.first(), GenericCandidates(True(), emptyMap()))
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs.first()}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
@@ -74,7 +75,7 @@ class CfaToChcTest {
         val solver = Z3SolverFactory.getInstace().createSolver()
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, emptyMap())
+            solver.addCHC(chc, GenericCandidates(True(), emptyMap()))
             Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -113,7 +114,7 @@ class CfaToChcTest {
         var unsatCount = 0
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, emptyMap())
+            solver.addCHC(chc, GenericCandidates(True(), emptyMap()))
             when (solver.check()) {
                 SolverStatus.SAT -> ++satCount
                 SolverStatus.UNSAT -> ++unsatCount
@@ -158,7 +159,7 @@ class CfaToChcTest {
         val invariantExpr = IntExprs.Eq(x.ref, IntExprs.Int(0))
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, emptyMap(), invariantExpr)
+            solver.addCHC(chc, GenericCandidates(invariantExpr, emptyMap()))
             Assert.assertEquals("CHC satisfiable with bound invariant that should prove safety", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -202,7 +203,7 @@ class CfaToChcTest {
         Assert.assertTrue("Invariants does not contain required element: $invariants", invariants.any { it.name == d.name })
 
         val candidates = mapOf(
-                Invariant(c.name) to BoolExprs.And(
+                Invariant(c.name) to And(
                         IntExprs.Gt(x.ref, IntExprs.Int(0)),
                         IntExprs.Geq(y.ref, IntExprs.Int(0))
                 ),
@@ -211,7 +212,7 @@ class CfaToChcTest {
         val solver = Z3SolverFactory.getInstace().createSolver()
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, candidates)
+            solver.addCHC(chc, GenericCandidates(True(), candidates))
             Assert.assertEquals("Simple CHC check error: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }

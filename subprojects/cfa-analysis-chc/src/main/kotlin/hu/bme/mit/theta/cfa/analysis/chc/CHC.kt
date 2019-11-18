@@ -66,8 +66,8 @@ data class CHCSystem(val facts: List<Fact> = emptyList(),
     }
 }
 
-fun Solver.addCHC(chc: CHC, candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType> = BoolExprs.True()) {
-    add(chc.solverExpr(candidates, default))
+fun Solver.addCHC(chc: CHC, candidates: InvariantCandidates) {
+    add(chc.solverExpr(candidates))
 }
 
 fun Solver.addSimpleCHC(simpleCHC: SimpleCHC) {
@@ -78,7 +78,7 @@ interface CHC {
     val body: AndExpr
     val postIndexing: VarIndexing
     val invariantsToFind: Set<Invariant>
-    fun solverExpr(candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType>
+    fun solverExpr(candidates: InvariantCandidates): Expr<BoolType>
     fun append(query: Query): CHC?
 }
 
@@ -88,9 +88,9 @@ data class Fact(override val body: AndExpr,
     override val invariantsToFind: Set<Invariant>
         get() = setOf(postInvariant)
 
-    override fun solverExpr(candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
+    override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> =
             BoolExprs.And(PathUtils.unfold(body, 0),
-                    BoolExprs.Not(PathUtils.unfold(candidates[postInvariant] ?: default, postIndexing)))
+                    BoolExprs.Not(PathUtils.unfold(candidates[postInvariant], postIndexing)))
 
     override fun append(query: Query): SimpleCHC {
         val newBody = Iterables.concat(body.ops,
@@ -110,8 +110,8 @@ data class Query(val preInvariant: Invariant,
 
     override fun toString(): String = "CHC($preInvariant and ($body) -> false)"
 
-    override fun solverExpr(candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
-            BoolExprs.And(PathUtils.unfold(candidates[preInvariant] ?: default, 0),
+    override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> =
+            BoolExprs.And(PathUtils.unfold(candidates[preInvariant], 0),
                     PathUtils.unfold(body, 0))
 
     override fun append(query: Query): Nothing? = null
@@ -127,10 +127,10 @@ data class InductiveClause(val preInvariant: Invariant,
 
     override fun toString(): String = "CHC($preInvariant and ($body) -> $postInvariant)"
 
-    override fun solverExpr(candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> =
-            BoolExprs.And(PathUtils.unfold(candidates[preInvariant] ?: default, 0),
+    override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> =
+            BoolExprs.And(PathUtils.unfold(candidates[preInvariant], 0),
                     PathUtils.unfold(body, 0),
-                    BoolExprs.Not(PathUtils.unfold(candidates[postInvariant] ?: default, postIndexing)))
+                    BoolExprs.Not(PathUtils.unfold(candidates[postInvariant], postIndexing)))
 
     override fun append(query: Query): Query {
         val newBody = Iterables.concat(body.ops,
@@ -148,7 +148,7 @@ data class SimpleCHC(override val body: AndExpr,
     override fun toString(): String = "CHC(($body) -> false)"
 
     fun solverExpr(): Expr<BoolType> = PathUtils.unfold(body, 0)
-    override fun solverExpr(candidates: Map<Invariant, Expr<BoolType>>, default: Expr<BoolType>): Expr<BoolType> = solverExpr()
+    override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> = solverExpr()
 
 
     override fun append(query: Query): Nothing? = null

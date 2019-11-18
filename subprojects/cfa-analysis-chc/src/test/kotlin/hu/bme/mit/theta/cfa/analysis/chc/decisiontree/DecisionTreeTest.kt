@@ -52,7 +52,7 @@ internal class DecisionTreeTest {
         )
 
         val tree = DecisionTree(setOf(dpA, dpB), constraints)
-        val expr = tree.candidates.getExpr(invariant)
+        val expr = tree.candidates[invariant]
         Assert.assertEquals(True(), ExprUtils.simplify(expr, valuationA))
         Assert.assertEquals(False(), ExprUtils.simplify(expr, valuationB))
         Assert.assertEquals(1, expr.arity)
@@ -84,8 +84,8 @@ internal class DecisionTreeTest {
         )
 
         val tree = DecisionTree(setOf(dpA, dpB), constraints)
-        val exprA = tree.candidates.getExpr(invariantA)
-        val exprB = tree.candidates.getExpr(invariantB)
+        val exprA = tree.candidates[invariantA]
+        val exprB = tree.candidates[invariantB]
         Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
         Assert.assertEquals(1, exprA.arity)
         Assert.assertEquals(0, exprB.arity)

@@ -1,6 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.decisiontree
 
-import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
+import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
@@ -10,11 +10,11 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
     private var root: Node = Builder(constraints).build(datapoints)
 
 
-    val candidates: InvariantCandidates
+    val candidates: CNFCandidates
         get() = root.candidates
 
     abstract class Node {
-        abstract val candidates: InvariantCandidates
+        abstract val candidates: CNFCandidates
         abstract val pivot: Decision?
         abstract val ifTrue: Node?
         abstract val ifFalse: Node?
@@ -27,18 +27,18 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
             get() = null
         override val ifFalse: Node?
             get() = null
-        override val candidates: InvariantCandidates by lazy {
+        override val candidates: CNFCandidates by lazy {
             if (label)
-                InvariantCandidates(listOf(And(listOf(True()))), emptyMap())
+                CNFCandidates(listOf(And(listOf(True()))), emptyMap())
             else
-                InvariantCandidates(emptyList(), emptyMap())
+                CNFCandidates(emptyList(), emptyMap())
         }
     }
 
     class Branch(override val pivot: Decision,
                  override val ifTrue: Node,
                  override val ifFalse: Node) : Node() {
-        override val candidates: InvariantCandidates by lazy {
+        override val candidates: CNFCandidates by lazy {
             pivot.transformCandidates(ifTrue.candidates, ifFalse.candidates)
         }
     }
