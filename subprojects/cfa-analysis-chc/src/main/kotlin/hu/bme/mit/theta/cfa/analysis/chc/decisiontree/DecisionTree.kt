@@ -7,7 +7,24 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
 import kotlin.math.abs
 
 class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
-    private var root: Node = Builder(constraints).build(datapoints)
+    private val root: Node
+
+    init {
+        val extendedConstraints = constraints.toMutableList()
+        for ((a, aDatapoint) in datapoints.withIndex()) {
+            for ((b, bDatapoint) in datapoints.withIndex()) {
+                if (a != b) {
+                    val (aInv, aVal) = aDatapoint
+                    val (bInv, bVal) = bDatapoint
+                    if (aInv == bInv && aVal.isLeq(bVal)) {
+                        extendedConstraints += Constraint(listOf(aDatapoint), bDatapoint)
+                        extendedConstraints += Constraint(listOf(bDatapoint), aDatapoint)
+                    }
+                }
+            }
+        }
+        root = Builder(extendedConstraints).build(datapoints)
+    }
 
 
     val candidates: CNFCandidates
