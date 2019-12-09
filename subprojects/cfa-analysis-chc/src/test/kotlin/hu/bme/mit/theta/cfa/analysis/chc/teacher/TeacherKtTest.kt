@@ -7,7 +7,6 @@ import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.DecisionTree
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.stmt.AssignStmt
 import hu.bme.mit.theta.core.stmt.AssumeStmt
-import hu.bme.mit.theta.core.stmt.Stmts
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntNeqExpr
 import hu.bme.mit.theta.solver.Solver
@@ -149,47 +148,6 @@ class TeacherTest {
         val invariantCandidates = findInvariantsFor(chcSystem, solver)
 
         for (chc in chcSystem.chcs) {
-            WithPushPop(solver).use {
-                solver.addCHC(chc, invariantCandidates)
-                Assert.assertEquals(SolverStatus.UNSAT, solver.check())
-            }
-        }
-    }
-
-    @Test(timeout = 20000)
-    fun multiplePathsMultipleLoopsSafeTest() {
-        val cfaBuilder = CFA.builder()
-        val initLoc = cfaBuilder.createLoc("init")
-        cfaBuilder.initLoc = initLoc
-        val errorLoc = cfaBuilder.createLoc("error")
-        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
-        cfaBuilder.errorLoc = errorLoc
-
-        val a = cfaBuilder.createLoc("a")
-        val b = cfaBuilder.createLoc("b")
-        val c = cfaBuilder.createLoc("c")
-        val d = cfaBuilder.createLoc("d")
-
-        val x = DeclManager.getVar("multiPathMultiLoop_x", IntExprs.Int())
-        val y = DeclManager.getVar("multiPathMultiLoop_y", IntExprs.Int())
-
-        cfaBuilder.createEdge(initLoc, a, Stmts.Assign(y, IntExprs.Int(1)))
-        cfaBuilder.createEdge(a, b, Stmts.Assume(IntExprs.Lt(x.ref, y.ref)))
-        cfaBuilder.createEdge(a, c, Stmts.Assume(IntExprs.Gt(x.ref, y.ref)))
-        cfaBuilder.createEdge(a, d, Stmts.Assume(IntExprs.Eq(x.ref, y.ref)))
-        cfaBuilder.createEdge(b, d, Stmts.Assign(y, IntExprs.Sub(y.ref, x.ref)))
-        cfaBuilder.createEdge(c, c, Stmts.Assign(x, IntExprs.Add(x.ref, y.ref)))
-        cfaBuilder.createEdge(c, d, Stmts.Assign(y, x.ref))
-        cfaBuilder.createEdge(d, a, Stmts.Havoc(x))
-        cfaBuilder.createEdge(d, errorLoc, Stmts.Assume(IntExprs.Leq(y.ref, IntExprs.Int(0))))
-
-        val cfa = cfaBuilder.build()
-
-        val chcsystem = cfaToChc(cfa)
-
-        val invariantCandidates = findInvariantsFor(chcsystem, solver)
-
-        for (chc in chcsystem.chcs) {
             WithPushPop(solver).use {
                 solver.addCHC(chc, invariantCandidates)
                 Assert.assertEquals(SolverStatus.UNSAT, solver.check())
