@@ -1,6 +1,8 @@
 package hu.bme.mit.theta.cfa.analysis.chc
 
 import com.google.common.collect.Iterables
+import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.Datapoint
+import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.AndExpr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
@@ -80,6 +82,7 @@ interface CHC {
     val invariantsToFind: Set<Invariant>
     fun solverExpr(candidates: InvariantCandidates): Expr<BoolType>
     fun append(query: Query): CHC?
+    fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?>
 }
 
 data class Fact(override val body: AndExpr,
@@ -100,6 +103,11 @@ data class Fact(override val body: AndExpr,
     }
 
     override fun toString(): String = "CHC(($body) -> $postInvariant)"
+
+    override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> {
+        val postValuation = PathUtils.extractValuation(model, postIndexing)
+        return null to Datapoint(postInvariant, postValuation)
+    }
 }
 
 data class Query(val preInvariant: Invariant,
@@ -115,6 +123,11 @@ data class Query(val preInvariant: Invariant,
                     PathUtils.unfold(body, 0))
 
     override fun append(query: Query): Nothing? = null
+
+    override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> {
+        val preValuation = PathUtils.extractValuation(model, 0)
+        return Datapoint(preInvariant, preValuation) to null
+    }
 }
 
 data class InductiveClause(val preInvariant: Invariant,
@@ -138,6 +151,12 @@ data class InductiveClause(val preInvariant: Invariant,
         val newPostIndexing = postIndexing.transform().add(query.postIndexing.transform()).build()
         return Query(preInvariant, AndExpr.of(newBody), newPostIndexing)
     }
+
+    override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> {
+        val preValuation = PathUtils.extractValuation(model, 0)
+        val postValuation = PathUtils.extractValuation(model, postIndexing)
+        return Datapoint(preInvariant, preValuation) to Datapoint(postInvariant, postValuation)
+    }
 }
 
 data class SimpleCHC(override val body: AndExpr,
@@ -152,4 +171,5 @@ data class SimpleCHC(override val body: AndExpr,
 
 
     override fun append(query: Query): Nothing? = null
+    override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> = null to null
 }
