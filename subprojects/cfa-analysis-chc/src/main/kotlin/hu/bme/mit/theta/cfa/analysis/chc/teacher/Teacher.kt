@@ -7,21 +7,24 @@ import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.DecisionTree
 import hu.bme.mit.theta.solver.Solver
-import hu.bme.mit.theta.solver.SolverStatus.UNSAT
+import hu.bme.mit.theta.solver.SolverStatus.SAT
 import hu.bme.mit.theta.solver.utils.WithPushPop
 
 fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates {
     var datapoints: Set<Datapoint> = setOf()
     var constraints: List<Constraint> = listOf()
+    var candidates: InvariantCandidates
     do {
+        var allUnsat = true
         val decTree = DecisionTree(datapoints, constraints)
         val nextDatapoints = datapoints.toMutableSet()
         val nextConstraints = constraints.toMutableList()
-        val candidates = decTree.candidates
+        candidates = decTree.candidates
         for (chc in chcSystem.chcs) {
             WithPushPop(solver).use {
                 solver.addCHC(chc, candidates)
-                if (solver.check() == UNSAT) {
+                if (solver.check() == SAT) {
+                    allUnsat = false
                     val model = solver.model
                     val (preDatapoint, postDatapoint) = chc.datapoints(model)
                     val source: List<Datapoint>
@@ -40,5 +43,6 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
         }
         datapoints = nextDatapoints
         constraints = nextConstraints
-    } while (true)
+    } while (!allUnsat)
+    return candidates
 }
