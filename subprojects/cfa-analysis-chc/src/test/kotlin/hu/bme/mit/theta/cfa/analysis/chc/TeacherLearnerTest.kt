@@ -1,9 +1,8 @@
-package hu.bme.mit.theta.cfa.analysis.chc.teacher
+package hu.bme.mit.theta.cfa.analysis.chc
 
 import hu.bme.mit.theta.cfa.CFA
-import hu.bme.mit.theta.cfa.analysis.chc.addCHC
-import hu.bme.mit.theta.cfa.analysis.chc.cfaToChc
 import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.DecisionTree
+import hu.bme.mit.theta.cfa.analysis.chc.teacher.findInvariantsFor
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.stmt.AssignStmt
 import hu.bme.mit.theta.core.stmt.AssumeStmt
@@ -18,7 +17,7 @@ import org.junit.Before
 import org.junit.Test
 
 
-class TeacherTest {
+class TeacherLearnerTest {
     var solver: Solver = Z3SolverFactory.getInstace().createSolver()
 
     @Before
