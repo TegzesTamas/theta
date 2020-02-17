@@ -9,13 +9,13 @@ data class Constraint(val source: List<Datapoint>, val target: Datapoint?)
 data class Datapoint(val invariant: Invariant, val valuation: Valuation)
 
 /**
- * Returns weather this datapoint can be separated from the other by a decision.
+ * Returns whether this datapoint can be separated from the other by a decision.
  * I.e. is there a decision which fits one but does not fit the other.
  */
 fun Datapoint.separableFrom(other: Datapoint): Boolean = invariant != other.invariant || valuation.separableFrom(other.valuation)
 
 /**
- * Returns weather this valuation can be separated from the other by a decision.
+ * Returns whether this valuation can be separated from the other by a decision.
  * I.e. is there a decision which fits one but does not fit the other.
  */
 fun Valuation.separableFrom(other: Valuation): Boolean {
