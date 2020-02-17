@@ -44,3 +44,16 @@ fun commonSubset(a: Valuation, b: Valuation): Valuation {
     }
     return mutableValuation
 }
+
+/**
+ * Returns whether this Datapoint holds every time that Datapoint holds.
+ * It returns true exactly when both datapoints refer to the same invariant and this datapoint assigns the same value
+ * to all the Decls the other assigns value to and possibly assignes values to other Decls.
+ */
+fun Datapoint.subsetOf(that: Datapoint): Boolean = this.invariant == that.invariant && this.valuation.subsetOf(that.valuation)
+
+/**
+ * Returns whether this valuation assignes the same value to all the Decls the other assignes value to and possibly
+ * assignes value to other Decls.
+ */
+fun Valuation.subsetOf(that: Valuation): Boolean = this.isLeq(that)
