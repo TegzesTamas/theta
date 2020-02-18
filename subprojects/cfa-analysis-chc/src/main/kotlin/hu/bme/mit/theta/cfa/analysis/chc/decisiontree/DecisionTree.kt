@@ -7,24 +7,7 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
 import kotlin.math.abs
 
 class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
-    private val root: Node
-
-    init {
-        val extendedConstraints = constraints.toMutableList()
-        for ((a, aDatapoint) in datapoints.withIndex()) {
-            for ((b, bDatapoint) in datapoints.withIndex()) {
-                if (a != b) {
-                    val (aInv, aVal) = aDatapoint
-                    val (bInv, bVal) = bDatapoint
-                    if (aInv == bInv && aVal.isLeq(bVal)) {
-                        extendedConstraints += Constraint(listOf(aDatapoint), bDatapoint)
-                        extendedConstraints += Constraint(listOf(bDatapoint), aDatapoint)
-                    }
-                }
-            }
-        }
-        root = Builder(extendedConstraints).build(datapoints)
-    }
+    private val root: Node = Builder(datapoints, constraints).build(datapoints)
 
 
     val candidates: CNFCandidates
@@ -60,12 +43,12 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
         }
     }
 
-    private class Builder(constraints: List<Constraint>) {
-        private val constraints: List<Constraint>
+    private class Builder(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
+        private val constraints: Collection<Constraint>
         private val forcedTrue: Set<Datapoint>
 
         init {
-            val constraintSystem = calcForced(constraints)
+            val constraintSystem = calcForced(datapoints, constraints)
                     ?: throw ContradictoryException("Constraints cannot be satisfied")
             this.constraints = constraintSystem.filteredConstraints
             this.forcedTrue = constraintSystem.forcedTrue
@@ -123,26 +106,39 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
             return VarValueDecision(mutableValuation)
         }
 
-        data class ConstraintSystem(val forcedTrue: Set<Datapoint>, val filteredConstraints: List<Constraint>)
+        data class ConstraintSystem(val forcedTrue: Set<Datapoint>, val filteredConstraints: Collection<Constraint>)
         companion object {
-            private fun calcForced(constraints: List<Constraint>): ConstraintSystem? {
-                val forcedTrue = mutableSetOf<Datapoint?>()
+            private fun calcForced(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>): ConstraintSystem? {
+                var ambiguousDatapoints = datapoints
+                val universallyForcedTrue = mutableSetOf<Datapoint?>()
+                val existentiallyForcedTrue = mutableSetOf<Datapoint?>()
                 var filteredConstraints = constraints
                 do {
-                    val prevSize = forcedTrue.size
-                    forcedTrue.addAll(
-                            filteredConstraints
-                                    .filter { it.source.isEmpty() }
-                                    .map { it.target }
-                    )
-                    if (null in forcedTrue) {
+                    val newUniversallyForcedTrue = filteredConstraints
+                            .filter { it.source.isEmpty() }
+                            .map { it.target }
+                            .toMutableList()
+                    if (null in universallyForcedTrue) {
                         return null
                     }
+                    universallyForcedTrue += newUniversallyForcedTrue
+                    existentiallyForcedTrue += newUniversallyForcedTrue
+                    val stillAmbiguous = mutableSetOf<Datapoint>()
+                    for (ambiguous in ambiguousDatapoints) {
+                        when {
+                            ambiguous in newUniversallyForcedTrue -> {
+                            }
+                            newUniversallyForcedTrue.any { it != null && ambiguous.subsetOf(it) } -> universallyForcedTrue += ambiguous
+                            newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) } -> existentiallyForcedTrue += ambiguous
+                            else -> stillAmbiguous += ambiguous
+                        }
+                    }
+                    ambiguousDatapoints = stillAmbiguous
                     filteredConstraints = filteredConstraints
-                            .filter { it.target !in forcedTrue }
-                            .map { c -> Constraint(c.source.filter { dp -> dp !in forcedTrue }, c.target) }
-                } while (forcedTrue.size != prevSize)
-                return ConstraintSystem(forcedTrue.filterNotNull().toSet(), filteredConstraints)
+                            .filter { it.target !in universallyForcedTrue }
+                            .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
+                } while (newUniversallyForcedTrue.isNotEmpty())
+                return ConstraintSystem(universallyForcedTrue.filterNotNull().toSet(), filteredConstraints)
             }
         }
     }
