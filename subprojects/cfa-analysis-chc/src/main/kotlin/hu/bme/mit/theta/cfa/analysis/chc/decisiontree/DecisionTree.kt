@@ -44,21 +44,14 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
     }
 
     private class Builder(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
-        private val constraints: Collection<Constraint>
-        private val forcedTrue: Set<Datapoint>
 
-        init {
-            val constraintSystem = calcForced(datapoints, constraints)
-                    ?: throw ContradictoryException("Constraints cannot be satisfied")
-            this.constraints = constraintSystem.filteredConstraints
-            this.forcedTrue = constraintSystem.forcedTrue
-        }
+        private val constraintSystem = ConstraintSystem(datapoints, constraints)
 
         fun build(datapoints: Set<Datapoint>): Node {
-            if (datapoints.none { it in forcedTrue }) {
+            if (datapoints.none { it in constraintSystem.universallyForcedTrue }) {
                 return Leaf(false)
             }
-            if (forcedTrue.containsAll(datapoints)) {
+            if (datapoints.all { it in constraintSystem.existentiallyForcedTrue }) {
                 return Leaf(true)
             }
             val decision = findSplittingDecision(datapoints)
@@ -106,31 +99,46 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
             return VarValueDecision(mutableValuation)
         }
 
-        data class ConstraintSystem(val forcedTrue: Set<Datapoint>, val filteredConstraints: Collection<Constraint>)
-        companion object {
-            private fun calcForced(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>): ConstraintSystem? {
-                var ambiguousDatapoints = datapoints
-                val universallyForcedTrue = mutableSetOf<Datapoint?>()
-                val existentiallyForcedTrue = mutableSetOf<Datapoint?>()
-                var filteredConstraints = constraints
+        class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
+            private val mutExistentiallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
+            private val mutUniversallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
+            private var ambiguousDatapoints = datapoints
+            val existentiallyForcedTrue: Set<Datapoint?>
+                get() = mutExistentiallyForcedTrue
+            val universallyForcedTrue: Set<Datapoint?>
+                get() = mutUniversallyForcedTrue
+            var filteredConstraints: Collection<Constraint> = constraints
+                private set
+
+            var contradictory: Boolean = false
+                private set
+
+            init {
+                calcForced()
+            }
+
+            private fun calcForced() {
                 do {
                     val newUniversallyForcedTrue = filteredConstraints
                             .filter { it.source.isEmpty() }
                             .map { it.target }
                             .toMutableList()
-                    if (null in universallyForcedTrue) {
-                        return null
+                    if (null in newUniversallyForcedTrue) {
+                        throw ContradictoryException("Unsatisfiable constraints")
                     }
-                    universallyForcedTrue += newUniversallyForcedTrue
-                    existentiallyForcedTrue += newUniversallyForcedTrue
+                    mutUniversallyForcedTrue += newUniversallyForcedTrue
+                    mutExistentiallyForcedTrue += newUniversallyForcedTrue
                     val stillAmbiguous = mutableSetOf<Datapoint>()
                     for (ambiguous in ambiguousDatapoints) {
-                        when {
-                            ambiguous in newUniversallyForcedTrue -> {
+                        if (ambiguous !in newUniversallyForcedTrue) {
+                            if (newUniversallyForcedTrue.any { it != null && ambiguous.subsetOf(it) }) {
+                                mutUniversallyForcedTrue += ambiguous
+                            } else {
+                                stillAmbiguous += ambiguous
+                                if (newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) }) {
+                                    mutExistentiallyForcedTrue += ambiguous
+                                }
                             }
-                            newUniversallyForcedTrue.any { it != null && ambiguous.subsetOf(it) } -> universallyForcedTrue += ambiguous
-                            newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) } -> existentiallyForcedTrue += ambiguous
-                            else -> stillAmbiguous += ambiguous
                         }
                     }
                     ambiguousDatapoints = stillAmbiguous
@@ -138,8 +146,8 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
                             .filter { it.target !in universallyForcedTrue }
                             .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
                 } while (newUniversallyForcedTrue.isNotEmpty())
-                return ConstraintSystem(universallyForcedTrue.filterNotNull().toSet(), filteredConstraints)
             }
+
         }
     }
 
