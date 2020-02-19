@@ -47,11 +47,15 @@ class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collectio
                 }
             }
             ambiguousDatapoints = stillAmbiguous
-            filteredConstraints =
-                    filteredConstraints.stream()
-                            .filter { it.target !in universallyForcedTrue }
-                            .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
-                            .toList()
+            filterConstraints()
         } while (newUniversallyForcedTrue.isNotEmpty())
+    }
+
+    private fun filterConstraints() {
+        filteredConstraints =
+                filteredConstraints.stream()
+                        .filter { it.target !in universallyForcedTrue }
+                        .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
+                        .toList()
     }
 }
