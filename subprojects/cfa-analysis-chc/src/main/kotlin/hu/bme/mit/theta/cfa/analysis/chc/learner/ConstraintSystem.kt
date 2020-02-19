@@ -1,5 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
+import kotlin.streams.toList
+
 class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
     private val mutExistentiallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
     private val mutUniversallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
