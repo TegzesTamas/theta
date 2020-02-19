@@ -43,7 +43,7 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
         }
     }
 
-    private class Builder(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
+    private class Builder(datapoints: Set<Datapoint>, constraints: Collection<Constraint>) {
 
         private val constraintSystem = ConstraintSystem(datapoints, constraints)
 
@@ -52,6 +52,9 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
                 return Leaf(false)
             }
             if (datapoints.all { it in constraintSystem.existentiallyForcedTrue }) {
+                return Leaf(true)
+            }
+            if (constraintSystem.tryToSetDatapointsTrue(datapoints)) {
                 return Leaf(true)
             }
             val decision = findSplittingDecision(datapoints)
