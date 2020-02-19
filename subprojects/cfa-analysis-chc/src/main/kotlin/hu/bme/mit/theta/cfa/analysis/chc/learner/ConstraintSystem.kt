@@ -1,4 +1,4 @@
-package hu.bme.mit.theta.cfa.analysis.chc.decisiontree
+package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collection<Constraint>) {
     private val mutExistentiallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()

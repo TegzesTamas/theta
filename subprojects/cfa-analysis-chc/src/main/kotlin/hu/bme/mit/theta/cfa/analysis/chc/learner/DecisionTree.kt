@@ -1,4 +1,4 @@
-package hu.bme.mit.theta.cfa.analysis.chc.decisiontree
+package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.core.model.MutableValuation

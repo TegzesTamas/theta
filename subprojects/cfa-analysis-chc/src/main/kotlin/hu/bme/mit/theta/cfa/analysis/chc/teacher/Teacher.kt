@@ -3,9 +3,9 @@ package hu.bme.mit.theta.cfa.analysis.chc.teacher
 import hu.bme.mit.theta.cfa.analysis.chc.CHCSystem
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.addCHC
-import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.Constraint
-import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.Datapoint
-import hu.bme.mit.theta.cfa.analysis.chc.decisiontree.DecisionTree
+import hu.bme.mit.theta.cfa.analysis.chc.learner.Constraint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTree
 import hu.bme.mit.theta.solver.Solver
 import hu.bme.mit.theta.solver.SolverStatus.SAT
 import hu.bme.mit.theta.solver.utils.WithPushPop
