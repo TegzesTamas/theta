@@ -3,46 +3,26 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 import kotlin.streams.toList
 
 
-class ConstraintSystem(datapoints: Set<Datapoint>, constraints: Collection<Constraint>) {
-    private var mutExistentiallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
-    private var mutUniversallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
-    private var ambiguousDatapoints = datapoints
-    var filteredConstraints: Collection<Constraint> = constraints
-        private set
+class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoint>,
+                                           initConstraints: Collection<Constraint>,
+                                           initExistentiallyForcedTrue: Set<Datapoint?>,
+                                           initUniversallyForcedTrue: Set<Datapoint?>) {
+
+    constructor(datapoints: Set<Datapoint>, constraints: Collection<Constraint>) : this(datapoints, constraints, emptySet(), emptySet())
+
+    private val ambiguousDatapoints: Set<Datapoint>
+    val filteredConstraints: List<Constraint>
 
 
     val existentiallyForcedTrue: Set<Datapoint?>
-        get() = mutExistentiallyForcedTrue
     val universallyForcedTrue: Set<Datapoint?>
-        get() = mutUniversallyForcedTrue
 
 
     init {
-        calcForced()
-    }
-
-    fun tryToSetDatapointsTrue(dpsToSetTrue: Collection<Datapoint>): Boolean {
-        val bckpMutExistentiallyForcedTrue = mutExistentiallyForcedTrue.toMutableSet()
-        val bckpMutUniversallyForcedTrue = mutUniversallyForcedTrue.toMutableSet()
-        val bckpAmbigousDatapoints = ambiguousDatapoints.toSet()
-        val bckpFilteredConstraints = filteredConstraints.toList()
-
-        mutExistentiallyForcedTrue.addAll(dpsToSetTrue)
-        try {
-            filterConstraints()
-            calcForced()
-        } catch (e: ContradictoryException) {
-            mutExistentiallyForcedTrue = bckpMutExistentiallyForcedTrue
-            mutUniversallyForcedTrue = bckpMutUniversallyForcedTrue
-            ambiguousDatapoints = bckpAmbigousDatapoints
-            filteredConstraints = bckpFilteredConstraints
-            return false
-        }
-        return true
-    }
-
-    @Throws(ContradictoryException::class)
-    private fun calcForced() {
+        val universallyForcedTrue = initUniversallyForcedTrue.toMutableSet()
+        val existentiallyForcedTrue = initExistentiallyForcedTrue.toMutableSet()
+        var filteredConstraints = filterConstraints(initConstraints, universallyForcedTrue, existentiallyForcedTrue)
+        var ambiguousDatapoints = initAmbiguousDatapoints
         do {
             val newUniversallyForcedTrue = filteredConstraints
                     .stream()
@@ -52,32 +32,47 @@ class ConstraintSystem(datapoints: Set<Datapoint>, constraints: Collection<Const
             if (null in newUniversallyForcedTrue) {
                 throw ContradictoryException("Unsatisfiable constraints")
             }
-            mutUniversallyForcedTrue.addAll(newUniversallyForcedTrue)
-            mutExistentiallyForcedTrue.addAll(newUniversallyForcedTrue)
+            universallyForcedTrue.addAll(newUniversallyForcedTrue)
+            existentiallyForcedTrue.addAll(newUniversallyForcedTrue)
             val stillAmbiguous = mutableSetOf<Datapoint>()
             for (ambiguous in ambiguousDatapoints) {
                 if (ambiguous !in newUniversallyForcedTrue) {
                     if (newUniversallyForcedTrue.any { it != null && ambiguous.subsetOf(it) }) {
-                        mutUniversallyForcedTrue.add(ambiguous)
-                        mutExistentiallyForcedTrue.add(ambiguous)
+                        universallyForcedTrue.add(ambiguous)
+                        existentiallyForcedTrue.add(ambiguous)
                     } else {
                         stillAmbiguous += ambiguous
-                        if (ambiguous !in mutExistentiallyForcedTrue && newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) }) {
-                            mutExistentiallyForcedTrue.add(ambiguous)
+                        if (ambiguous !in existentiallyForcedTrue && newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) }) {
+                            existentiallyForcedTrue.add(ambiguous)
                         }
                     }
                 }
             }
             ambiguousDatapoints = stillAmbiguous
-            filterConstraints()
+            filteredConstraints = filterConstraints(filteredConstraints, universallyForcedTrue, existentiallyForcedTrue)
         } while (newUniversallyForcedTrue.isNotEmpty())
+        this.ambiguousDatapoints = ambiguousDatapoints
+        this.filteredConstraints = filteredConstraints
+        this.existentiallyForcedTrue = existentiallyForcedTrue
+        this.universallyForcedTrue = universallyForcedTrue
     }
 
-    private fun filterConstraints() {
-        filteredConstraints =
-                filteredConstraints.stream()
-                        .filter { it.target !in universallyForcedTrue }
-                        .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
-                        .toList()
+    fun tryToSetDatapointsTrue(dpsToSetTrue: Collection<Datapoint>): ConstraintSystem? =
+            try {
+                ConstraintSystem(ambiguousDatapoints,
+                        filteredConstraints,
+                        existentiallyForcedTrue + dpsToSetTrue,
+                        universallyForcedTrue)
+            } catch (e: ContradictoryException) {
+                null
+            }
+
+    private companion object {
+        private fun filterConstraints(constraints: Collection<Constraint>,
+                                      universallyForcedTrue: Set<Datapoint?>,
+                                      existentiallyForcedTrue: Set<Datapoint?>) = constraints.stream()
+                .filter { it.target !in universallyForcedTrue }
+                .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
+                .toList()
     }
 }
