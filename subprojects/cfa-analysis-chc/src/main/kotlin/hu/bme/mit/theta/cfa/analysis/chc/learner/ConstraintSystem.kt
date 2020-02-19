@@ -4,15 +4,15 @@ class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collectio
     private val mutExistentiallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
     private val mutUniversallyForcedTrue: MutableSet<Datapoint?> = mutableSetOf()
     private var ambiguousDatapoints = datapoints
+    var filteredConstraints: Collection<Constraint> = constraints
+        private set
+
+
     val existentiallyForcedTrue: Set<Datapoint?>
         get() = mutExistentiallyForcedTrue
     val universallyForcedTrue: Set<Datapoint?>
         get() = mutUniversallyForcedTrue
-    var filteredConstraints: Collection<Constraint> = constraints
-        private set
 
-    var contradictory: Boolean = false
-        private set
 
     init {
         calcForced()
@@ -21,31 +21,35 @@ class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collectio
     private fun calcForced() {
         do {
             val newUniversallyForcedTrue = filteredConstraints
+                    .stream()
                     .filter { it.source.isEmpty() }
                     .map { it.target }
-                    .toMutableList()
+                    .toList()
             if (null in newUniversallyForcedTrue) {
                 throw ContradictoryException("Unsatisfiable constraints")
             }
-            mutUniversallyForcedTrue += newUniversallyForcedTrue
-            mutExistentiallyForcedTrue += newUniversallyForcedTrue
+            mutUniversallyForcedTrue.addAll(newUniversallyForcedTrue)
+            mutExistentiallyForcedTrue.addAll(newUniversallyForcedTrue)
             val stillAmbiguous = mutableSetOf<Datapoint>()
             for (ambiguous in ambiguousDatapoints) {
                 if (ambiguous !in newUniversallyForcedTrue) {
                     if (newUniversallyForcedTrue.any { it != null && ambiguous.subsetOf(it) }) {
-                        mutUniversallyForcedTrue += ambiguous
+                        mutUniversallyForcedTrue.add(ambiguous)
+                        mutExistentiallyForcedTrue.add(ambiguous)
                     } else {
                         stillAmbiguous += ambiguous
-                        if (newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) }) {
-                            mutExistentiallyForcedTrue += ambiguous
+                        if (ambiguous !in mutExistentiallyForcedTrue && newUniversallyForcedTrue.any { it != null && !ambiguous.disjoint(it) }) {
+                            mutExistentiallyForcedTrue.add(ambiguous)
                         }
                     }
                 }
             }
             ambiguousDatapoints = stillAmbiguous
-            filteredConstraints = filteredConstraints
-                    .filter { it.target !in universallyForcedTrue }
-                    .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
+            filteredConstraints =
+                    filteredConstraints.stream()
+                            .filter { it.target !in universallyForcedTrue }
+                            .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
+                            .toList()
         } while (newUniversallyForcedTrue.isNotEmpty())
     }
 }
