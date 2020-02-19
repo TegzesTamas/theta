@@ -92,4 +92,36 @@ internal class DecisionTreeTest {
         val notConstantOps = exprA.ops.first().ops.filter { it != True() }
         Assert.assertEquals(0, notConstantOps.size)
     }
+
+    @Test(expected = ContradictoryException::class)
+    fun intersectionContradiction() {
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        val z = DeclManager.getVar("z", Int())
+
+        val valA = MutableValuation()
+        valA.put(x, Int(2))
+        valA.put(y, Int(3))
+        val dpA = Datapoint(Invariant("A"), valA)
+        val valB = MutableValuation()
+        valB.put(x, Int(2))
+        valB.put(z, Int(32))
+        val dpB = Datapoint(Invariant("A"), valB)
+        val valC = MutableValuation()
+        valC.put(x, Int(18))
+        val dpC = Datapoint(Invariant("A"), valC)
+        val valD = MutableValuation()
+        valD.put(y, Int(12))
+        valD.put(z, Int(98))
+        val dpD = Datapoint(Invariant("A"), valD)
+
+        val datapoints = setOf(dpA, dpB, dpC, dpD)
+
+        val constraints = listOf(
+                Constraint(emptyList(), dpA),
+                Constraint(listOf(dpB), dpC),
+                Constraint(listOf(dpD), null)
+        )
+        DecisionTree(datapoints, constraints)
+    }
 }
