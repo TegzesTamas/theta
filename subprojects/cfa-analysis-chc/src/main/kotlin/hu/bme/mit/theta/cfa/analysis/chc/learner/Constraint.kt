@@ -18,7 +18,7 @@ fun Datapoint.disjoint(other: Datapoint): Boolean = invariant != other.invariant
  * Returns whether this valuation can be separated from the other by a decision.
  * I.e. is there a decision which fits one but does not fit the other.
  */
-private fun Valuation.disjoint(other: Valuation): Boolean {
+fun Valuation.disjoint(other: Valuation): Boolean {
     val valuationMap = this.toMap()
     val otherValuationMap = other.toMap()
     return valuationMap.entries.any { (key, value) ->

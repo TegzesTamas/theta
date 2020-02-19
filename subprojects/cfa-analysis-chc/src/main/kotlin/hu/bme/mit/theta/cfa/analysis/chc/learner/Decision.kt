@@ -10,12 +10,14 @@ import hu.bme.mit.theta.core.type.booltype.BoolType
 
 
 interface Decision {
-    fun matchesDatapoint(datapoint: Datapoint): Boolean
+    fun datapointCanBeTrue(datapoint: Datapoint): Boolean
+    fun datapointCanBeFalse(datapoint: Datapoint): Boolean
     fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates
 }
 
 data class InvariantDecision(val matching: Set<Invariant>) : Decision {
-    override fun matchesDatapoint(datapoint: Datapoint) = datapoint.invariant in matching
+    override fun datapointCanBeTrue(datapoint: Datapoint) = datapoint.invariant in matching
+    override fun datapointCanBeFalse(datapoint: Datapoint): Boolean = !datapointCanBeTrue(datapoint)
     override fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates {
         val invariants = matching.toMutableSet()
         val candidateMap = mutableMapOf<Invariant, List<AndExpr>>()
@@ -33,7 +35,8 @@ data class InvariantDecision(val matching: Set<Invariant>) : Decision {
 }
 
 data class VarValueDecision(val valuation: Valuation) : Decision {
-    override fun matchesDatapoint(datapoint: Datapoint) = datapoint.valuation.isLeq(valuation)
+    override fun datapointCanBeTrue(datapoint: Datapoint) = !datapoint.valuation.disjoint(valuation)
+    override fun datapointCanBeFalse(datapoint: Datapoint): Boolean = !datapoint.valuation.isLeq(valuation)
 
     override fun transformCandidates(ifTrue: CNFCandidates, ifFalse: CNFCandidates): CNFCandidates {
         val invariants = mutableSetOf<Invariant>()

@@ -55,7 +55,8 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
                 return Leaf(true)
             }
             val decision = findSplittingDecision(datapoints)
-            val (ifTrue, ifFalse) = datapoints.partition { decision.matchesDatapoint(it) }
+            val ifTrue = datapoints.filter { decision.datapointCanBeTrue(it) }
+            val ifFalse = datapoints.filter { decision.datapointCanBeFalse(it) }
             return Branch(decision, build(ifTrue.toSet()), build(ifFalse.toSet()))
         }
 
