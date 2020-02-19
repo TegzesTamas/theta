@@ -14,7 +14,7 @@ import org.junit.Test
 
 internal class DecisionTreeTest {
 
-    @Test(expected = DecisionTree.ContradictoryException::class)
+    @Test(expected = ContradictoryException::class)
     fun contradictoryTest() {
         val dpA = Datapoint(Invariant("A"), MutableValuation())
         val dpB = Datapoint(Invariant("B"), MutableValuation())

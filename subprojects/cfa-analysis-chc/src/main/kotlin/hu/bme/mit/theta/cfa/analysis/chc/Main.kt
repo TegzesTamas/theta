@@ -1,7 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc
 
 import hu.bme.mit.theta.cfa.CFA
-import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTree
+import hu.bme.mit.theta.cfa.analysis.chc.learner.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.findInvariantsFor
 import hu.bme.mit.theta.cfa.dsl.CfaDslManager
 import hu.bme.mit.theta.solver.z3.Z3SolverFactory
@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
         try {
             findInvariantsFor(chcSystem, solver)
             println("SAFE")
-        } catch (e: DecisionTree.ContradictoryException) {
+        } catch (e: ContradictoryException) {
             println("UNSAFE")
         }
     } ?: error("Could not parse model")

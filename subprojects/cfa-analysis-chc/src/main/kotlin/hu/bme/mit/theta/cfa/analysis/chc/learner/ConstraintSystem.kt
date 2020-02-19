@@ -48,7 +48,4 @@ class ConstraintSystem(datapoints: Collection<Datapoint>, constraints: Collectio
                     .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
         } while (newUniversallyForcedTrue.isNotEmpty())
     }
-
-    class ContradictoryException(s: String? = null) : Throwable(s)
-
 }
