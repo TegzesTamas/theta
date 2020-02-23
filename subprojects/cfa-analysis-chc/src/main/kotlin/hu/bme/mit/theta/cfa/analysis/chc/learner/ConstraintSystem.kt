@@ -6,9 +6,18 @@ import kotlin.streams.toList
 class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoint>,
                                            initConstraints: Collection<Constraint>,
                                            initExistentiallyForcedTrue: Set<Datapoint?>,
-                                           initUniversallyForcedTrue: Set<Datapoint?>) {
+                                           initUniversallyForcedTrue: Set<Datapoint?>,
+                                           initExistentiallyForcedFalse: Set<Datapoint?>,
+                                           initUniversallyForcedFalse: Set<Datapoint?>) {
 
-    constructor(datapoints: Set<Datapoint>, constraints: Collection<Constraint>) : this(datapoints, constraints, emptySet(), emptySet())
+    constructor(datapoints: Set<Datapoint>, constraints: Collection<Constraint>) : this(
+            datapoints,
+            constraints,
+            emptySet(),
+            emptySet(),
+            emptySet(),
+            setOf(null)
+    )
 
     private val ambiguousDatapoints: Set<Datapoint>
     val filteredConstraints: List<Constraint>
@@ -17,11 +26,17 @@ class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoin
     val existentiallyForcedTrue: Set<Datapoint?>
     val universallyForcedTrue: Set<Datapoint?>
 
+    val existentiallyForcedFalse: Set<Datapoint?>
+    val universallyForcedFalse: Set<Datapoint?>
+
 
     init {
         val universallyForcedTrue = initUniversallyForcedTrue.toMutableSet()
         val existentiallyForcedTrue = initExistentiallyForcedTrue.toMutableSet()
-        var filteredConstraints = filterConstraints(initConstraints, universallyForcedTrue, existentiallyForcedTrue)
+        val existentiallyForcedFalse = initExistentiallyForcedFalse.toMutableSet()
+        val universallyForcedFalse = initUniversallyForcedFalse.toMutableSet()
+        var filteredConstraints = filterConstraints(initConstraints, universallyForcedTrue, existentiallyForcedTrue,
+                universallyForcedFalse, existentiallyForcedFalse)
         var ambiguousDatapoints = initAmbiguousDatapoints
         do {
             val newUniversallyForcedTrue = filteredConstraints
@@ -49,12 +64,44 @@ class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoin
                 }
             }
             ambiguousDatapoints = stillAmbiguous
-            filteredConstraints = filterConstraints(filteredConstraints, universallyForcedTrue, existentiallyForcedTrue)
+            filteredConstraints = filterConstraints(filteredConstraints, universallyForcedTrue, existentiallyForcedTrue,
+                    universallyForcedFalse, existentiallyForcedFalse)
         } while (newUniversallyForcedTrue.isNotEmpty())
+
+        do {
+            val newUniversallyForcedFalse = filteredConstraints
+                    .stream()
+                    .filter { it.target == null && it.source.size == 1 }
+                    .map { it.source.single() }
+                    .toList()
+            universallyForcedFalse.addAll(newUniversallyForcedFalse)
+            existentiallyForcedFalse.addAll(newUniversallyForcedFalse)
+
+            val stillAmbiguous = mutableSetOf<Datapoint>()
+            for (ambiguous in ambiguousDatapoints) {
+                if (ambiguous !in newUniversallyForcedFalse) {
+                    if (newUniversallyForcedFalse.any { it != null && ambiguous.subsetOf(it) }) {
+                        universallyForcedFalse.add(ambiguous)
+                        existentiallyForcedFalse.add(ambiguous)
+                    } else {
+                        stillAmbiguous += ambiguous
+                        if (newUniversallyForcedFalse.any { it != null && !ambiguous.disjoint(it) }) {
+                            existentiallyForcedFalse.add(ambiguous)
+                        }
+                    }
+                }
+            }
+            ambiguousDatapoints = stillAmbiguous
+            filteredConstraints = filterConstraints(filteredConstraints, universallyForcedTrue, existentiallyForcedTrue,
+                    universallyForcedFalse, existentiallyForcedFalse)
+
+        } while (newUniversallyForcedFalse.isNotEmpty())
         this.ambiguousDatapoints = ambiguousDatapoints
         this.filteredConstraints = filteredConstraints
         this.existentiallyForcedTrue = existentiallyForcedTrue
         this.universallyForcedTrue = universallyForcedTrue
+        this.existentiallyForcedFalse = existentiallyForcedFalse
+        this.universallyForcedFalse = universallyForcedFalse
     }
 
     fun tryToSetDatapointsTrue(dpsToSetTrue: Collection<Datapoint>): ConstraintSystem? =
@@ -62,7 +109,21 @@ class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoin
                 ConstraintSystem(ambiguousDatapoints,
                         filteredConstraints,
                         existentiallyForcedTrue + dpsToSetTrue,
-                        universallyForcedTrue)
+                        universallyForcedTrue,
+                        existentiallyForcedFalse,
+                        universallyForcedFalse)
+            } catch (e: ContradictoryException) {
+                null
+            }
+
+    fun tryToSetDatapointsFalse(dpsToSetFalse: Collection<Datapoint>): ConstraintSystem? =
+            try {
+                ConstraintSystem(ambiguousDatapoints,
+                        filteredConstraints,
+                        existentiallyForcedTrue,
+                        universallyForcedTrue,
+                        existentiallyForcedFalse + dpsToSetFalse,
+                        universallyForcedFalse)
             } catch (e: ContradictoryException) {
                 null
             }
@@ -70,9 +131,20 @@ class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoin
     private companion object {
         private fun filterConstraints(constraints: Collection<Constraint>,
                                       universallyForcedTrue: Set<Datapoint?>,
-                                      existentiallyForcedTrue: Set<Datapoint?>) = constraints.stream()
-                .filter { it.target !in universallyForcedTrue }
-                .map { c -> Constraint(c.source.filter { dp -> dp !in existentiallyForcedTrue }, c.target) }
-                .toList()
+                                      existentiallyForcedTrue: Set<Datapoint?>,
+                                      universallyForcedFalse: Set<Datapoint?>,
+                                      existentiallyForcedFalse: Set<Datapoint?>) =
+                constraints.stream()
+                        .filter { constraint ->
+                            constraint.target !in universallyForcedTrue
+                                    && constraint.source.none { dp -> dp in universallyForcedFalse }
+                        }
+                        .map { c ->
+                            Constraint(
+                                    c.source.filter { dp -> dp !in existentiallyForcedTrue },
+                                    if (c.target in existentiallyForcedFalse) null else c.target
+                            )
+                        }
+                        .toList()
     }
 }

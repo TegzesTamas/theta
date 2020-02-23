@@ -48,15 +48,23 @@ class DecisionTree(datapoints: Set<Datapoint>, constraints: List<Constraint>) {
         private var constraintSystem = ConstraintSystem(datapoints, constraints)
 
         fun build(datapoints: Set<Datapoint>): Node {
-            if (datapoints.none { it in constraintSystem.universallyForcedTrue }) {
-                return Leaf(false)
-            }
             if (datapoints.all { it in constraintSystem.existentiallyForcedTrue }) {
                 return Leaf(true)
             }
-            constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
-                constraintSystem = it
-                return Leaf(true)
+            if (datapoints.all { it in constraintSystem.existentiallyForcedFalse }) {
+                return Leaf(false)
+            }
+            if (datapoints.none { it in constraintSystem.universallyForcedFalse }) {
+                constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
+                    constraintSystem = it
+                    return Leaf(true)
+                }
+            }
+            if (datapoints.none { it in constraintSystem.universallyForcedTrue }) {
+                constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
+                    constraintSystem = it
+                    return Leaf(false)
+                }
             }
             val decision = findSplittingDecision(datapoints)
             val ifTrue = datapoints.filter { decision.datapointCanBeTrue(it) }
