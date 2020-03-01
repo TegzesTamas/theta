@@ -28,7 +28,7 @@ internal class DecisionTreeTest {
                 Constraint(listOf(dpA, dpB), dpD),
                 Constraint(listOf(dpD, dpB), dpC)
         )
-        DecisionTree(datapoints, constraints)
+        DecisionTreeBuilder(datapoints, constraints).build()
     }
 
     @Test
@@ -51,7 +51,7 @@ internal class DecisionTreeTest {
                 Constraint(listOf(dpB), null)
         )
 
-        val tree = DecisionTree(setOf(dpA, dpB), constraints)
+        val tree = DecisionTreeBuilder(setOf(dpA, dpB), constraints).build()
         val expr = tree.candidates[invariant]
         Assert.assertEquals(True(), ExprUtils.simplify(expr, valuationA))
         Assert.assertEquals(False(), ExprUtils.simplify(expr, valuationB))
@@ -83,7 +83,7 @@ internal class DecisionTreeTest {
                 Constraint(listOf(dpB), null)
         )
 
-        val tree = DecisionTree(setOf(dpA, dpB), constraints)
+        val tree = DecisionTreeBuilder(setOf(dpA, dpB), constraints).build()
         val exprA = tree.candidates[invariantA]
         val exprB = tree.candidates[invariantB]
         Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
@@ -122,6 +122,6 @@ internal class DecisionTreeTest {
                 Constraint(listOf(dpB), dpC),
                 Constraint(listOf(dpD), null)
         )
-        DecisionTree(datapoints, constraints)
+        DecisionTreeBuilder(datapoints, constraints).build()
     }
 }
