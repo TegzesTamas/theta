@@ -1,7 +1,10 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
-import hu.bme.mit.theta.core.model.MutableValuation
-import kotlin.math.abs
+import hu.bme.mit.theta.core.decl.Decl
+import hu.bme.mit.theta.core.type.inttype.IntExprs
+import hu.bme.mit.theta.core.type.inttype.IntLitExpr
+import hu.bme.mit.theta.core.type.inttype.IntType
+import kotlin.math.min
 
 class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: List<Constraint>) {
     var constraintSystem = ConstraintSystem(datapoints, constraints)
@@ -75,36 +78,101 @@ class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: L
             return InvariantDecision(chosenInvariants)
         }
 
-
-        val targetSplitSize = datapointsToSplit.size / 2
-        val variableToDatapointsAndValues = datapointsToSplit.asSequence()
+        val variableToOccurrences = datapointsToSplit.asSequence()
                 .flatMap { datapoint ->
                     datapoint.valuation.toMap()
                             .asSequence()
-                            .map { valEntry -> valEntry }
+                            .map { (variable, value) ->
+                                (value as? IntLitExpr)?.let {
+                                    @Suppress("UNCHECKED_CAST")
+                                    VariableOccurrence(variable as Decl<IntType>, it, datapoint)
+                                }
+                            }
+                            .filterNotNull()
                 }
-                .groupBy({ it.key }, { it.value })
+                .groupBy { it.variable }
+                .mapValues { (_, occurrences) -> occurrences.sortedBy { it.value } }
 
-        val variableToValuesToCount =
-                variableToDatapointsAndValues
-                        .mapValues { (_, values) ->
-                            values.groupingBy { it }
-                                    .eachCount()
-                        }
-        val bestVariableToSplitBy = variableToValuesToCount
-                .asSequence()
-                .filter { (_, valueToOccurrences) -> valueToOccurrences.keys.size > 1 }
-                .minBy { (_, valueToOccurrences) -> valueToOccurrences.keys.size }
-        assert(bestVariableToSplitBy != null)
-        assert(bestVariableToSplitBy!!.value.isNotEmpty())
-        val chosenVariable = bestVariableToSplitBy.key
-        val (chosenValue, _) =
-                bestVariableToSplitBy.value.asSequence()
-                        .minBy { abs(it.value - targetSplitSize) }!!
-        val mutableValuation = MutableValuation()
-        mutableValuation.put(chosenVariable, chosenValue)
-        return VarValueDecision(mutableValuation)
+        var bestVar: Decl<IntType>? = null
+        var bestLit: IntLitExpr? = null
+        var bestError: Int? = null
+
+        for ((variable, occurrences) in variableToOccurrences) {
+            val bestSplit = findBestSplitForVariable(occurrences, datapointsToSplit)
+            if (bestSplit != null) {
+                val (lit, error) = bestSplit
+                if (bestError == null || error < bestError) {
+                    bestVar = variable
+                    bestLit = lit
+                    bestError = error
+                }
+            }
+        }
+        if (bestVar != null && bestLit != null && bestError != null) {
+            return ExprDecision(IntExprs.Leq(bestVar.ref, bestLit))
+        } else {
+            error("No viable split was found")
+        }
     }
+
+    private fun findBestSplitForVariable(
+            orderedOccurrences: List<VariableOccurrence>,
+            datapointsToSplit: Set<Datapoint>
+    ): Pair<IntLitExpr, Int>? {
+        val splittableDps = orderedOccurrences.map { it.datapoint }
+        val (splittableTrue, splittableFalse) = calcForcedLabeling(splittableDps)
+        val unsplittableDps = datapointsToSplit - splittableDps
+        val (unsplittableTrue, unsplittableFalse) = calcForcedLabeling(unsplittableDps)
+
+        var bestLit: IntLitExpr? = null
+        var bestError: Int? = null
+
+        var matchingTrue = unsplittableTrue
+        var matchingFalse = unsplittableFalse
+        var matchingTotal = unsplittableDps.size
+        var nonMatchingTrue = splittableTrue
+        var nonMatchingFalse = splittableFalse
+        var nonMatchingTotal = splittableDps.size + unsplittableDps.size
+        for ((_, lit, dp) in orderedOccurrences) {
+            ++matchingTotal
+            --nonMatchingTotal
+            when (dp) {
+                in constraintSystem.universallyForcedTrue -> {
+                    ++matchingTrue
+                    --nonMatchingTrue
+                }
+                in constraintSystem.universallyForcedFalse -> {
+                    ++matchingFalse
+                    --nonMatchingFalse
+                }
+            }
+            val error = classificationError(matchingTrue, matchingFalse, matchingTotal) +
+                    classificationError(nonMatchingTrue, nonMatchingFalse, nonMatchingTotal)
+
+            if (bestError == null || error < bestError) {
+                bestLit = lit
+                bestError = error
+            }
+        }
+        return bestLit?.let { bestError?.let { bestLit to bestError } }
+    }
+
+    private data class VariableOccurrence(val variable: Decl<IntType>, val value: IntLitExpr, val datapoint: Datapoint)
+    private data class ForcedLabeling(val mustBeTrue: Int, val mustBeFalse: Int)
+
+    private fun calcForcedLabeling(dps: Iterable<Datapoint>): ForcedLabeling {
+        var mustBeTrue = 0
+        var mustBeFalse = 0
+        for (dp in dps) {
+            when (dp) {
+                in constraintSystem.universallyForcedTrue -> ++mustBeTrue
+                in constraintSystem.universallyForcedFalse -> ++mustBeFalse
+            }
+        }
+        return ForcedLabeling(mustBeTrue, mustBeFalse)
+    }
+
+    private fun classificationError(mustBeTrue: Int, mustBeFalse: Int, total: Int): Int = min(mustBeTrue, mustBeFalse)
 
     private abstract class BuildNode {
         abstract val built: DecisionTree.Node?
