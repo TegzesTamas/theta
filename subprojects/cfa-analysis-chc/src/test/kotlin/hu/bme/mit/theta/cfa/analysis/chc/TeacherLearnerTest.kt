@@ -43,11 +43,11 @@ class TeacherLearnerTest {
 
         val cfa = cfaBuilder.build()
 
-        val chcsystem = cfaToChc(cfa)
+        val chcSystem = cfaToChc(cfa)
 
-        val invariantCandidates = findInvariantsFor(chcsystem, solver)
+        val invariantCandidates = findInvariantsFor(chcSystem, solver)
 
-        for (chc in chcsystem.chcs) {
+        for (chc in chcSystem.chcs) {
             WithPushPop(solver).use {
                 solver.addCHC(chc, invariantCandidates)
                 Assert.assertEquals(SolverStatus.UNSAT, solver.check())
@@ -80,11 +80,11 @@ class TeacherLearnerTest {
 
         val cfa = cfaBuilder.build()
 
-        val chcsystem = cfaToChc(cfa)
+        val chcSystem = cfaToChc(cfa)
 
-        val invariantCandidates = findInvariantsFor(chcsystem, solver)
+        val invariantCandidates = findInvariantsFor(chcSystem, solver)
 
-        for (chc in chcsystem.chcs) {
+        for (chc in chcSystem.chcs) {
             WithPushPop(solver).use {
                 solver.addCHC(chc, invariantCandidates)
                 Assert.assertEquals(SolverStatus.UNSAT, solver.check())
@@ -117,9 +117,9 @@ class TeacherLearnerTest {
 
         val cfa = cfaBuilder.build()
 
-        val chcsystem = cfaToChc(cfa)
+        val chcSystem = cfaToChc(cfa)
 
-        findInvariantsFor(chcsystem, solver)
+        findInvariantsFor(chcSystem, solver)
         error("Unsafe CFA found safe")
     }
 

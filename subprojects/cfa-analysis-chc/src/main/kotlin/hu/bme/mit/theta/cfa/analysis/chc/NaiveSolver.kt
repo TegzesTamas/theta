@@ -14,7 +14,7 @@ fun CHCSystem.findFailingPath(solver: Solver): SimpleCHC? {
             }
         }
     }
-    val chcs = LinkedList<Query>(queries)
+    val chcs = LinkedList(queries)
     while (chcs.isNotEmpty()) {
         val chc = chcs.pop()
         val toCheck = facts.filter { it.postInvariant == chc.preInvariant }.map { it.append(chc) }

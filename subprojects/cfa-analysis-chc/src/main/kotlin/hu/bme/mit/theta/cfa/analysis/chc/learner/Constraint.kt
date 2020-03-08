@@ -50,12 +50,12 @@ private fun intersection(a: Valuation, b: Valuation): Valuation {
 /**
  * Returns whether this Datapoint holds every time that Datapoint holds.
  * It returns true exactly when both datapoints refer to the same invariant and this datapoint assigns the same value
- * to all the Decls the other assigns value to and possibly assignes values to other Decls.
+ * to all the Decls the other assigns value to and possibly assigns values to other Decls.
  */
 fun Datapoint.subsetOf(that: Datapoint): Boolean = this.invariant == that.invariant && this.valuation.subsetOf(that.valuation)
 
 /**
- * Returns whether this valuation assignes the same value to all the Decls the other assignes value to and possibly
- * assignes value to other Decls.
+ * Returns whether this valuation assigns the same value to all the Decls the other assigns value to and possibly
+ * assigns value to other Decls.
  */
 private fun Valuation.subsetOf(that: Valuation): Boolean = this.isLeq(that)
