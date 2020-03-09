@@ -77,10 +77,17 @@ class ConstraintSystem private constructor(initAmbiguousDatapoints: Set<Datapoin
             universallyForcedFalse.addAll(newUniversallyForcedFalse)
             existentiallyForcedFalse.addAll(newUniversallyForcedFalse)
 
+            if (newUniversallyForcedFalse.any { it in existentiallyForcedTrue }) {
+                throw ContradictoryException("Unsatisfiable constraints")
+            }
+
             val stillAmbiguous = mutableSetOf<Datapoint>()
             for (ambiguous in ambiguousDatapoints) {
                 if (ambiguous !in newUniversallyForcedFalse) {
                     if (newUniversallyForcedFalse.any { it != null && ambiguous.subsetOf(it) }) {
+                        if (ambiguous in existentiallyForcedTrue) {
+                            throw ContradictoryException("Unsatisfiable constraints")
+                        }
                         universallyForcedFalse.add(ambiguous)
                         existentiallyForcedFalse.add(ambiguous)
                     } else {
