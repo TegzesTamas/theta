@@ -7,6 +7,8 @@ import hu.bme.mit.theta.cfa.dsl.CfaDslManager
 import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import java.io.FileInputStream
 
+public const val DEBUG = true
+
 fun main(args: Array<String>) {
     val model = args[0]
     var cfa: CFA? = null
@@ -14,7 +16,9 @@ fun main(args: Array<String>) {
         cfa = CfaDslManager.createCfa(it)
     }
     cfa?.let {
+        if (DEBUG) println(cfa)
         val chcSystem = cfaToChc(it)
+        if (DEBUG) println(chcSystem)
         val solver = Z3SolverFactory.getInstace().createSolver()
         try {
             findInvariantsFor(chcSystem, solver)
