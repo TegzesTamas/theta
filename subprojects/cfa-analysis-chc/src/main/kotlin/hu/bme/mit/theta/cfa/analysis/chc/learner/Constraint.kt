@@ -4,9 +4,13 @@ import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.model.Valuation
 
-data class Constraint(val source: List<Datapoint>, val target: Datapoint?)
+data class Constraint(val source: List<Datapoint>, val target: Datapoint?) {
+    override fun toString(): String = "[$source -> $target]"
+}
 
-data class Datapoint(val invariant: Invariant, val valuation: Valuation)
+data class Datapoint(val invariant: Invariant, val valuation: Valuation) {
+    override fun toString(): String = "$invariant(${valuation.toMap()})"
+}
 
 /**
  * Returns whether this datapoint can be separated from the other by a decision.

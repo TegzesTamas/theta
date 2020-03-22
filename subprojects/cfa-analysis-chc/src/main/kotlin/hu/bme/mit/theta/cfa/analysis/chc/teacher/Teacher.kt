@@ -17,8 +17,14 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
     var candidates: InvariantCandidates
     do {
         var allUnsat = true
-        if (DEBUG) println()
-        if (DEBUG) println("*** Trying to find candidates for $constraints ***")
+        if (DEBUG) {
+            println()
+            println("*** Trying to find candidates ***")
+            for (constraint in constraints) {
+                println("\t\t$constraint")
+            }
+            println("*** END OF CONSTRAINTS ***")
+        }
         val decTree = DecisionTreeBuilder(datapoints, constraints).build()
         val nextDatapoints = datapoints.toMutableSet()
         val nextConstraints = constraints.toMutableList()
@@ -43,7 +49,12 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
                     postDatapoint?.let {
                         nextDatapoints += it
                     }
-                    nextConstraints += Constraint(source, postDatapoint)
+                    val newConstraint = Constraint(source, postDatapoint)
+                    nextConstraints += newConstraint
+                    if (DEBUG) {
+                        println("Adding Constraint: $newConstraint")
+                        println()
+                    }
                 }
             }
         }

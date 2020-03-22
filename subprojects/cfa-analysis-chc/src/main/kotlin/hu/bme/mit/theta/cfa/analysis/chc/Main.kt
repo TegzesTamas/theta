@@ -18,7 +18,16 @@ fun main(args: Array<String>) {
     cfa?.let {
         if (DEBUG) println(cfa)
         val chcSystem = cfaToChc(it)
-        if (DEBUG) println(chcSystem)
+        if (DEBUG) {
+            println("********* CHC SYSTEM ***********")
+            println("INVARIANTS : ${chcSystem.invariants}")
+            println()
+            println("CHCS: ")
+            for (chc in chcSystem.chcs) {
+                println("\t $chc")
+            }
+            println()
+        }
         val solver = Z3SolverFactory.getInstace().createSolver()
         try {
             findInvariantsFor(chcSystem, solver)

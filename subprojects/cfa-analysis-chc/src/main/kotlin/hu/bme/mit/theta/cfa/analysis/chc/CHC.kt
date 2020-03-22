@@ -12,7 +12,9 @@ import hu.bme.mit.theta.core.utils.PathUtils
 import hu.bme.mit.theta.core.utils.VarIndexing
 import hu.bme.mit.theta.solver.Solver
 
-data class Invariant(val name: String)
+data class Invariant(val name: String) {
+    override fun toString(): String = "inv_$name"
+}
 
 data class CHCSystem(val facts: List<Fact> = emptyList(),
                      val inductiveClauses: List<InductiveClause> = emptyList(),
