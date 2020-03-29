@@ -1,6 +1,10 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.False
@@ -27,7 +31,7 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(listOf(dpA, dpB), dpD))
                 .addConstraint(Constraint(listOf(dpD, dpB), dpC))
                 .build()
-        DecisionTreeBuilder(constraintSystem).build()
+        Learner(constraintSystem).buildTree()
     }
 
     @Test
@@ -50,7 +54,7 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(listOf(dpB), null))
                 .build()
 
-        val tree = DecisionTreeBuilder(constraintsSystem).build()
+        val tree = Learner(constraintsSystem).buildTree()
         val expr = tree.candidates[invariant]
         Assert.assertEquals(True(), ExprUtils.simplify(expr, valuationA))
         Assert.assertEquals(False(), ExprUtils.simplify(expr, valuationB))
@@ -82,7 +86,7 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(listOf(dpB), null))
                 .build()
 
-        val tree = DecisionTreeBuilder(constraintSystem).build()
+        val tree = Learner(constraintSystem).buildTree()
         val exprA = tree.candidates[invariantA]
         val exprB = tree.candidates[invariantB]
         Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
@@ -119,6 +123,6 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(listOf(dpB), dpC))
                 .addConstraint(Constraint(listOf(dpD), null))
                 .build()
-        DecisionTreeBuilder(constraintSystem).build()
+        Learner(constraintSystem).buildTree()
     }
 }

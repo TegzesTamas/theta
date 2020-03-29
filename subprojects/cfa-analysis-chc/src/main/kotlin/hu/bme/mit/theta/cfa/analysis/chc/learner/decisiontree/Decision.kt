@@ -1,7 +1,9 @@
-package hu.bme.mit.theta.cfa.analysis.chc.learner
+package hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree
 
 import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.disjoint
 import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.AndExpr

@@ -1,4 +1,4 @@
-package hu.bme.mit.theta.cfa.analysis.chc.learner
+package hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree
 
 import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And

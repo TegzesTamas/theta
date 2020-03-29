@@ -1,13 +1,21 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsFalse
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsTrue
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.Decision
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.DecisionTree
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ExprDecision
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.InvariantDecision
 import hu.bme.mit.theta.core.decl.Decl
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntLitExpr
 import hu.bme.mit.theta.core.type.inttype.IntType
 import kotlin.math.min
 
-class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
-    fun build(): DecisionTree {
+class Learner(private var constraintSystem: ConstraintSystem) {
+    fun buildTree(): DecisionTree {
 
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
         data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)

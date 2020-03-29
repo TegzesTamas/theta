@@ -4,10 +4,10 @@ import hu.bme.mit.theta.cfa.analysis.chc.CHCSystem
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.addCHC
-import hu.bme.mit.theta.cfa.analysis.chc.learner.Constraint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.ConstraintSystem
-import hu.bme.mit.theta.cfa.analysis.chc.learner.Datapoint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeBuilder
+import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.solver.Solver
 import hu.bme.mit.theta.solver.SolverStatus.SAT
 import hu.bme.mit.theta.solver.utils.WithPushPop
@@ -26,7 +26,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
             }
             println("*** END OF CONSTRAINTS ***")
         }
-        val decTree = DecisionTreeBuilder(constraintSystem).build()
+        val decTree = Learner(constraintSystem).buildTree()
         candidates = decTree.candidates
         if (DEBUG) println("Found candidates: $candidates")
         if (DEBUG) println()
