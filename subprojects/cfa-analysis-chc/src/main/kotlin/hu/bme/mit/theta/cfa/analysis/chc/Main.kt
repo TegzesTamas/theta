@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
         if (DEBUG) println(cfa)
         val chcSystem = cfaToChc(it)
         if (DEBUG) {
-            println("********* CHC SYSTEM ***********")
+            println("*********** CHC SYSTEM ***********")
             println("INVARIANTS : ${chcSystem.invariants}")
             println()
             println("CHCS: ")
@@ -33,6 +33,10 @@ fun main(args: Array<String>) {
             findInvariantsFor(chcSystem, solver)
             println("SAFE")
         } catch (e: ContradictoryException) {
+            if (DEBUG) {
+                println("*********** Contradictory constraints ***********")
+                println(e.contradictorySubset)
+            }
             println("UNSAFE")
         }
     } ?: error("Could not parse model")
