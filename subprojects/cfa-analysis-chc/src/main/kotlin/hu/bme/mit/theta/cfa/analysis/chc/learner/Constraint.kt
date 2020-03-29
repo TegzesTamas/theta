@@ -56,7 +56,7 @@ private fun intersection(a: Valuation, b: Valuation): Valuation {
  * It returns true exactly when both datapoints refer to the same invariant and this datapoint assigns the same value
  * to all the Decls the other assigns value to and possibly assigns values to other Decls.
  */
-fun Datapoint.subsetOf(that: Datapoint): Boolean = this.invariant == that.invariant && this.valuation.subsetOf(that.valuation)
+fun Datapoint.subsetOf(that: Datapoint): Boolean = this === that || (this.invariant == that.invariant && this.valuation.subsetOf(that.valuation))
 
 /**
  * Returns whether this valuation assigns the same value to all the Decls the other assigns value to and possibly

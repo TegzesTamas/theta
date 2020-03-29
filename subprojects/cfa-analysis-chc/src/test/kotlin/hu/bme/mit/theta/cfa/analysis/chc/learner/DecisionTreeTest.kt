@@ -20,15 +20,14 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(Invariant("B"), MutableValuation())
         val dpC = Datapoint(Invariant("C"), MutableValuation())
         val dpD = Datapoint(Invariant("D"), MutableValuation())
-        val datapoints = setOf(dpA, dpB, dpC, dpD)
-        val constraints = listOf(
-                Constraint(emptyList(), dpA),
-                Constraint(listOf(dpA, dpB, dpC, dpD), null),
-                Constraint(listOf(dpA), dpB),
-                Constraint(listOf(dpA, dpB), dpD),
-                Constraint(listOf(dpD, dpB), dpC)
-        )
-        DecisionTreeBuilder(datapoints, constraints).build()
+        val constraintSystem = ConstraintSystem.Builder()
+                .addConstraint(Constraint(emptyList(), dpA))
+                .addConstraint(Constraint(listOf(dpA, dpB, dpC, dpD), null))
+                .addConstraint(Constraint(listOf(dpA), dpB))
+                .addConstraint(Constraint(listOf(dpA, dpB), dpD))
+                .addConstraint(Constraint(listOf(dpD, dpB), dpC))
+                .build()
+        DecisionTreeBuilder(constraintSystem).build()
     }
 
     @Test
@@ -46,12 +45,12 @@ internal class DecisionTreeTest {
         valuationB.put(y, Int(50))
         val dpB = Datapoint(invariant, valuationB)
 
-        val constraints = listOf(
-                Constraint(emptyList(), dpA),
-                Constraint(listOf(dpB), null)
-        )
+        val constraintsSystem = ConstraintSystem.Builder()
+                .addConstraint(Constraint(emptyList(), dpA))
+                .addConstraint(Constraint(listOf(dpB), null))
+                .build()
 
-        val tree = DecisionTreeBuilder(setOf(dpA, dpB), constraints).build()
+        val tree = DecisionTreeBuilder(constraintsSystem).build()
         val expr = tree.candidates[invariant]
         Assert.assertEquals(True(), ExprUtils.simplify(expr, valuationA))
         Assert.assertEquals(False(), ExprUtils.simplify(expr, valuationB))
@@ -78,12 +77,12 @@ internal class DecisionTreeTest {
         val invariantB = Invariant("B")
         val dpB = Datapoint(invariantB, valuationB)
 
-        val constraints = listOf(
-                Constraint(emptyList(), dpA),
-                Constraint(listOf(dpB), null)
-        )
+        val constraintSystem = ConstraintSystem.Builder()
+                .addConstraint(Constraint(emptyList(), dpA))
+                .addConstraint(Constraint(listOf(dpB), null))
+                .build()
 
-        val tree = DecisionTreeBuilder(setOf(dpA, dpB), constraints).build()
+        val tree = DecisionTreeBuilder(constraintSystem).build()
         val exprA = tree.candidates[invariantA]
         val exprB = tree.candidates[invariantB]
         Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
@@ -115,13 +114,11 @@ internal class DecisionTreeTest {
         valD.put(z, Int(98))
         val dpD = Datapoint(Invariant("A"), valD)
 
-        val datapoints = setOf(dpA, dpB, dpC, dpD)
-
-        val constraints = listOf(
-                Constraint(emptyList(), dpA),
-                Constraint(listOf(dpB), dpC),
-                Constraint(listOf(dpD), null)
-        )
-        DecisionTreeBuilder(datapoints, constraints).build()
+        val constraintSystem = ConstraintSystem.Builder()
+                .addConstraint(Constraint(emptyList(), dpA))
+                .addConstraint(Constraint(listOf(dpB), dpC))
+                .addConstraint(Constraint(listOf(dpD), null))
+                .build()
+        DecisionTreeBuilder(constraintSystem).build()
     }
 }

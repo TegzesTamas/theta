@@ -6,14 +6,13 @@ import hu.bme.mit.theta.core.type.inttype.IntLitExpr
 import hu.bme.mit.theta.core.type.inttype.IntType
 import kotlin.math.min
 
-class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: List<Constraint>) {
-    var constraintSystem = ConstraintSystem(datapoints, constraints)
+class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
     fun build(): DecisionTree {
 
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
         data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)
 
-        val toProcess = mutableListOf(SetToProcess(datapoints, null))
+        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints, null))
         val ready = mutableListOf<BuildNode>()
         while (toProcess.isNotEmpty()) {
             val (currDps, parentSlot) = toProcess.removeAt(0)
@@ -47,19 +46,19 @@ class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: L
     }
 
     private fun tryToLabel(datapoints: Set<Datapoint>): DecisionTree.Leaf? {
-        if (datapoints.all { it in constraintSystem.existentiallyForcedTrue }) {
+        if (datapoints.all { it in constraintSystem.existentiallyTrue }) {
             return DecisionTree.Leaf(true)
         }
-        if (datapoints.all { it in constraintSystem.existentiallyForcedFalse }) {
+        if (datapoints.all { it in constraintSystem.existentiallyFalse }) {
             return DecisionTree.Leaf(false)
         }
-        if (datapoints.none { it in constraintSystem.universallyForcedFalse }) {
+        if (datapoints.none { it in constraintSystem.universallyFalse }) {
             constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(true)
             }
         }
-        if (datapoints.none { it in constraintSystem.universallyForcedTrue }) {
+        if (datapoints.none { it in constraintSystem.universallyTrue }) {
             constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(false)
@@ -137,11 +136,11 @@ class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: L
             ++matchingTotal
             --nonMatchingTotal
             when (dp) {
-                in constraintSystem.universallyForcedTrue -> {
+                in constraintSystem.universallyTrue -> {
                     ++matchingTrue
                     --nonMatchingTrue
                 }
-                in constraintSystem.universallyForcedFalse -> {
+                in constraintSystem.universallyFalse -> {
                     ++matchingFalse
                     --nonMatchingFalse
                 }
@@ -165,8 +164,8 @@ class DecisionTreeBuilder(private val datapoints: Set<Datapoint>, constraints: L
         var mustBeFalse = 0
         for (dp in dps) {
             when (dp) {
-                in constraintSystem.universallyForcedTrue -> ++mustBeTrue
-                in constraintSystem.universallyForcedFalse -> ++mustBeFalse
+                in constraintSystem.universallyTrue -> ++mustBeTrue
+                in constraintSystem.universallyFalse -> ++mustBeFalse
             }
         }
         return ForcedLabeling(mustBeTrue, mustBeFalse)
