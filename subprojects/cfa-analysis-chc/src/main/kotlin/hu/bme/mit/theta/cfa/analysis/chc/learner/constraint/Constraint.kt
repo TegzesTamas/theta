@@ -27,7 +27,7 @@ fun Valuation.disjoint(other: Valuation): Boolean {
     val otherValuationMap = other.toMap()
     return valuationMap.entries.any { (key, value) ->
         val otherValue = otherValuationMap[key]
-        return otherValue != null && value != null && otherValue != value
+        return@any otherValue != null && value != null && otherValue != value
     }
 }
 
