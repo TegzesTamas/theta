@@ -103,59 +103,82 @@ class ConstraintSystem private constructor(
         @Throws(ContradictoryException::class)
         private fun makePositiveDeductions() {
             do {
-                val newForcedTrue = constraints.asSequence()
+                val newExistentiallyTrue = constraints.asSequence()
+                        .filter { !existentiallyTrue.containsKey(it.target) }
                         .filter { existentiallyTrue.keys.containsAll(it.source) }
                         .map { it.target to it }
                         .toMap()
-                newForcedTrue[null]?.let {
+                val newUniversallyTrue = constraints.asSequence()
+                        .filter { universallyTrue.keys.containsAll(it.source) }
+                        .map { it.target to it }
+                        .toMap()
+                newExistentiallyTrue[null]?.let {
                     throw ContradictoryException(retraceDeductions(it))
                 }
-                existentiallyTrue.putAll(newForcedTrue)
-                universallyTrue.putAll(newForcedTrue)
+                existentiallyTrue.putAll(newExistentiallyTrue)
+                universallyTrue.putAll(newUniversallyTrue)
                 val stillAmbiguous = mutableSetOf<Datapoint>()
                 for (ambiguous in ambiguousDatapoints) {
-                    val superSetEntry = newForcedTrue.entries
+                    val superSetEntry = newUniversallyTrue.entries
                             .firstOrNull { (dp, _) -> dp != null && ambiguous.subsetOf(dp) }
                     if (superSetEntry != null) {
                         universallyTrue[ambiguous] = superSetEntry.value
                         existentiallyTrue[ambiguous] = superSetEntry.value
                     } else {
                         stillAmbiguous.add(ambiguous)
-                        val nonDisjointEntry = newForcedTrue.entries
+                        val nonDisjointEntry = newUniversallyTrue.entries
                                 .firstOrNull { (dp, _) -> dp != null && !dp.disjoint(ambiguous) }
                         if (nonDisjointEntry != null) {
                             existentiallyTrue[ambiguous] = nonDisjointEntry.value
+                        } else {
+                            val subsetEntry = newUniversallyTrue.entries
+                                    .firstOrNull { (dp, _) -> dp != null && dp.subsetOf(ambiguous) }
+                            if (subsetEntry != null) {
+                                existentiallyTrue[ambiguous] = subsetEntry.value
+                            }
                         }
                     }
                 }
                 ambiguousDatapoints = stillAmbiguous
-                constraints.removeAll { universallyTrue.contains(it.target) }
-            } while (newForcedTrue.isNotEmpty())
+                constraints.removeAll { universallyTrue.containsKey(it.target) }
+            } while (newExistentiallyTrue.isNotEmpty())
         }
 
         private fun makeNegativeDeductions() {
             do {
-                val newForcedFalse = constraints.asSequence()
+                val newExistentiallyFalse = constraints.asSequence()
                         .filter { it.target in existentiallyFalse }
                         .flatMap {
-                            it.source.singleOrNull { dp -> !universallyFalse.contains(dp) }
+                            it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
+                                    ?.let { source -> sequenceOf(source) }
+                                    ?: emptySequence()
+                        }
+                        .toSet()
+                val newUniversallyFalse = constraints.asSequence()
+                        .filter { it.target in universallyFalse }
+                        .flatMap {
+                            it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
                                     ?.let { source -> sequenceOf(source) }
                                     ?: emptySequence()
                         }
                         .toSet()
                 val stillAmbiguous = mutableSetOf<Datapoint>()
                 for (ambiguous in ambiguousDatapoints) {
-                    if (newForcedFalse.any { ambiguous.subsetOf(it) }) {
+                    if (newUniversallyFalse.any { ambiguous.subsetOf(it) }) {
                         universallyFalse.add(ambiguous)
                         existentiallyFalse.add(ambiguous)
                     } else {
                         stillAmbiguous.add(ambiguous)
-                        if (newForcedFalse.any { !ambiguous.disjoint(it) }) {
+                        if (newUniversallyFalse.any { !ambiguous.disjoint(it) }) {
                             existentiallyFalse.add(ambiguous)
+                        } else {
+                            if (newExistentiallyFalse.any { it.subsetOf(ambiguous) }) {
+                                existentiallyFalse.add(ambiguous)
+                            }
                         }
                     }
                 }
-            } while (newForcedFalse.isNotEmpty())
+            } while (newExistentiallyFalse.isNotEmpty())
         }
 
         private fun retraceDeductions(constraint: Constraint): List<Constraint> {
