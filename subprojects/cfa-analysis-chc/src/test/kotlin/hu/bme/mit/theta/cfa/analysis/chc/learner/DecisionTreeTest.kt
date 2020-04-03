@@ -102,27 +102,39 @@ internal class DecisionTreeTest {
         val y = DeclManager.getVar("y", Int())
         val z = DeclManager.getVar("z", Int())
 
-        val valA = MutableValuation()
-        valA.put(x, Int(2))
-        valA.put(y, Int(3))
-        val dpA = Datapoint(Invariant("A"), valA)
-        val valB = MutableValuation()
-        valB.put(x, Int(2))
-        valB.put(z, Int(32))
-        val dpB = Datapoint(Invariant("A"), valB)
-        val valC = MutableValuation()
-        valC.put(x, Int(18))
-        val dpC = Datapoint(Invariant("A"), valC)
-        val valD = MutableValuation()
-        valD.put(y, Int(12))
-        valD.put(z, Int(98))
-        val dpD = Datapoint(Invariant("A"), valD)
+        val inv = Invariant("A")
 
-        val constraintSystem = ConstraintSystem.Builder()
+        val valA = MutableValuation().apply {
+            put(x, Int(2))
+            put(y, Int(3))
+        }
+        val dpA = Datapoint(inv, valA)
+        val valB = MutableValuation().apply {
+            put(x, Int(2))
+            put(z, Int(32))
+        }
+        val dpB = Datapoint(inv, valB)
+        val valC = MutableValuation().apply {
+            put(x, Int(18))
+            put(y, Int(12))
+            put(z, Int(98))
+        }
+        val dpC = Datapoint(inv, valC)
+        val valD = MutableValuation().apply {
+            put(y, Int(12))
+            put(z, Int(98))
+        }
+        val dpD = Datapoint(inv, valD)
+
+        val build = ConstraintSystem.Builder()
                 .addConstraint(Constraint(emptyList(), dpA))
                 .addConstraint(Constraint(listOf(dpB), dpC))
                 .addConstraint(Constraint(listOf(dpD), null))
                 .build()
-        Learner(constraintSystem).buildTree()
+
+        println("Universally true: ${build.universallyTrue}")
+        println("Existentially true: ${build.existentiallyTrue}")
+        println("Universally false: ${build.universallyFalse}")
+        println("Existentially false: ${build.existentiallyFalse}")
     }
 }
