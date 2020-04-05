@@ -20,9 +20,9 @@ class Learner(private var constraintSystem: ConstraintSystem) {
     fun buildTree(): DecisionTree {
 
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
-        data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)
+        data class SetToProcess(val datapoints: Map<Datapoint, Boolean>, val slot: ParentSlot?)
 
-        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints, null))
+        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.asSequence().map { it to true }.toMap(), null))
         val ready = mutableListOf<BuildNode>()
         while (toProcess.isNotEmpty()) {
             val (currDps, parentSlot) = toProcess.removeAt(0)
@@ -33,9 +33,9 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             if (leaf != null) {
                 node = LeafBuildNode(leaf)
             } else {
-                val decision = findSplittingDecision(currDps)
-                val ifTrue = currDps.filter { decision.datapointCanBeTrue(it) }.toSet()
-                val ifFalse = currDps.filter { decision.datapointCanBeFalse(it) }.toSet()
+                val decision = findSplittingDecision(currDps.keys)
+                val ifTrue = currDps.asSequence().filter { decision.datapointCanBeTrue(it.key) }.map { it.key to (it.value || decision.datapointCanBeFalse(it.key)) }.toMap()
+                val ifFalse = currDps.asSequence().filter { decision.datapointCanBeFalse(it.key) }.map { it.key to (it.value || decision.datapointCanBeTrue(it.key)) }.toMap()
                 node = BranchBuildNode(decision)
                 toProcess += SetToProcess(ifTrue, ParentSlot(node, true))
                 toProcess += SetToProcess(ifFalse, ParentSlot(node, false))
@@ -55,21 +55,29 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         return DecisionTree(ready[0].built!!)
     }
 
-    private fun tryToLabel(datapoints: Set<Datapoint>): DecisionTree.Leaf? {
-        if (datapoints.all { it in constraintSystem.existentiallyTrue }) {
+    private fun tryToLabel(datapoints: Map<Datapoint, Boolean>): DecisionTree.Leaf? {
+        if (datapoints.keys.all { it in constraintSystem.universallyTrue }) {
             return DecisionTree.Leaf(true)
         }
-        if (datapoints.all { it in constraintSystem.existentiallyFalse }) {
+        if (datapoints.keys.all { it in constraintSystem.universallyFalse }) {
             return DecisionTree.Leaf(false)
         }
-        if (datapoints.none { it in constraintSystem.universallyFalse }) {
-            constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
+        val universalDps = datapoints.filterValues { it }.keys
+        val existentialDps = datapoints.filterValues { !it }.keys
+        val couldBeLabeledTrue =
+                universalDps.none { it in constraintSystem.existentiallyFalse }
+                        && existentialDps.none { it in constraintSystem.universallyFalse }
+        if (couldBeLabeledTrue) {
+            constraintSystem.tryToSetDatapointsTrue(universalDps, existentialDps)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(true)
             }
         }
-        if (datapoints.none { it in constraintSystem.universallyTrue }) {
-            constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
+        val couldBeLabeledFalse =
+                universalDps.none { it in constraintSystem.existentiallyTrue }
+                        && existentialDps.none { it in constraintSystem.universallyTrue }
+        if (couldBeLabeledFalse) {
+            constraintSystem.tryToSetDatapointsFalse(universalDps, existentialDps)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(false)
             }

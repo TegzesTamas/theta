@@ -61,9 +61,10 @@ class ConstraintSystem private constructor(
         }
 
         @Throws(ContradictoryException::class)
-        fun setDatapointsTrue(dpsToSetTrue: Collection<Datapoint>): Builder {
-            require(datapoints.containsAll(dpsToSetTrue))
-            if (dpsToSetTrue.any { it in universallyFalse }) {
+        fun setDatapointsTrue(universalDps: Collection<Datapoint>, existentialDps: Collection<Datapoint>): Builder {
+            require(datapoints.containsAll(universalDps))
+            require(datapoints.containsAll(existentialDps))
+            if (existentialDps.any { it in universallyFalse } || universalDps.any { it in existentiallyFalse }) {
                 throw ContradictoryException(emptyList(), "Cannot set datapoint true, because it is already forced false")
             }
             val dummyDp = Datapoint(Invariant("setDatapointsTrue"), MutableValuation())
@@ -71,19 +72,27 @@ class ConstraintSystem private constructor(
             universallyTrue[dummyDp] = dummyConstraint
             existentiallyTrue[dummyDp] = dummyConstraint
             val dummySource = listOf(dummyDp)
-            dpsToSetTrue.asSequence()
+            existentialDps.asSequence()
                     .map { it to Constraint(dummySource, it) }
                     .toMap(existentiallyTrue)
+            val universalMap = universalDps.asSequence()
+                    .map { it to Constraint(dummySource, it) }
+            existentiallyTrue.putAll(universalMap)
+            universallyTrue.putAll(universalMap)
             makePositiveDeductions()
             return this
         }
 
-        fun setDatapointsFalse(dpsToSetFalse: Collection<Datapoint>): Builder {
-            require(datapoints.containsAll(dpsToSetFalse))
-            if (dpsToSetFalse.any { it in universallyTrue }) {
+        @Throws(ContradictoryException::class)
+        fun setDatapointsFalse(universalDps: Collection<Datapoint>, existentialDps: Collection<Datapoint>): Builder {
+            require(datapoints.containsAll(universalDps))
+            require(datapoints.containsAll(existentialDps))
+            if (existentialDps.any { it in universallyTrue } || universalDps.any { it in existentiallyTrue }) {
                 throw ContradictoryException(emptyList(), "Cannot set datapoint false because it is already forced true")
             }
-            existentiallyFalse.addAll(dpsToSetFalse)
+            existentiallyFalse.addAll(existentialDps)
+            existentiallyFalse.addAll(universalDps)
+            universallyFalse.addAll(universalDps)
             return this
         }
 
@@ -241,23 +250,20 @@ class ConstraintSystem private constructor(
     }
 }
 
-fun ConstraintSystem.tryToSetDatapointsTrue(dpsToSetTrue: Collection<Datapoint>): ConstraintSystem? {
+fun ConstraintSystem.tryToSetDatapointsTrue(universalDps: Collection<Datapoint>, existentialDps: Collection<Datapoint>): ConstraintSystem? {
     val builder = ConstraintSystem.Builder(this)
     return try {
-        builder.setDatapointsTrue(dpsToSetTrue)
+        builder.setDatapointsTrue(universalDps, existentialDps)
         builder.build()
     } catch (e: ContradictoryException) {
         null
     }
 }
 
-fun ConstraintSystem.tryToSetDatapointsFalse(dpsToSetFalse: Collection<Datapoint>): ConstraintSystem? {
-    if (dpsToSetFalse.any { it in universallyTrue }) {
-        return null
-    }
+fun ConstraintSystem.tryToSetDatapointsFalse(universalDps: Collection<Datapoint>, existentialDps: Collection<Datapoint>): ConstraintSystem? {
     val builder = ConstraintSystem.Builder(this)
     return try {
-        builder.setDatapointsFalse(dpsToSetFalse)
+        builder.setDatapointsFalse(universalDps, existentialDps)
         builder.build()
     } catch (e: ContradictoryException) {
         null
