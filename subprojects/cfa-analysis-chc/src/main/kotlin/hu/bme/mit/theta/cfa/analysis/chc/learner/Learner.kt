@@ -1,5 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
+import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsFalse
@@ -37,6 +38,11 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 val ifTrue = currDps.asSequence().filter { decision.datapointCanBeTrue(it.key) }.map { it.key to (it.value || decision.datapointCanBeFalse(it.key)) }.toMap()
                 val ifFalse = currDps.asSequence().filter { decision.datapointCanBeFalse(it.key) }.map { it.key to (it.value || decision.datapointCanBeTrue(it.key)) }.toMap()
                 node = BranchBuildNode(decision)
+                if (DEBUG) {
+                    if (ifTrue == currDps || ifFalse == currDps) {
+                        error("Tried to split datapoints, but one of the new nodes have the same datapoints as before")
+                    }
+                }
                 toProcess += SetToProcess(ifTrue, ParentSlot(node, true))
                 toProcess += SetToProcess(ifFalse, ParentSlot(node, false))
             }
