@@ -36,7 +36,7 @@ class TeacherLearnerTest {
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("CfaToCHCTest_loopless_x", IntExprs.Int())
+        val x = DeclManager.getVar("x", IntExprs.Int())
 
         cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
         cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
@@ -67,8 +67,8 @@ class TeacherLearnerTest {
         val leftLoc = cfaBuilder.createLoc("left")
         val rightLoc = cfaBuilder.createLoc("right")
 
-        val x = DeclManager.getVar("CfaToCHCTest_loopless_parallel_x", IntExprs.Int())
-        val y = DeclManager.getVar("CfaToCHCTest_loopless_parallel_y", IntExprs.Int())
+        val x = DeclManager.getVar("x", IntExprs.Int())
+        val y = DeclManager.getVar("y", IntExprs.Int())
 
 
         cfaBuilder.createEdge(initLoc, leftLoc, AssignStmt.of(x, IntExprs.Int(0)))
@@ -104,8 +104,8 @@ class TeacherLearnerTest {
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("CfaToCHCTest_loopless_parallel_x", IntExprs.Int())
-        val y = DeclManager.getVar("CfaToCHCTest_loopless_parallel_y", IntExprs.Int())
+        val x = DeclManager.getVar("x", IntExprs.Int())
+        val y = DeclManager.getVar("y", IntExprs.Int())
 
 
         cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
@@ -134,8 +134,8 @@ class TeacherLearnerTest {
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("CfaToCHCTest_loopless_x", IntExprs.Int())
-        val y = DeclManager.getVar("CfaToCHCTest_loopless_y", IntExprs.Int())
+        val x = DeclManager.getVar("x", IntExprs.Int())
+        val y = DeclManager.getVar("y", IntExprs.Int())
 
         cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
         cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
