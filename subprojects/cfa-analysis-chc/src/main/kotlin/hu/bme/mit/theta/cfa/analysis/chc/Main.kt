@@ -7,7 +7,7 @@ import hu.bme.mit.theta.cfa.dsl.CfaDslManager
 import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import java.io.FileInputStream
 
-public const val DEBUG = true
+public const val DEBUG = false
 
 fun main(args: Array<String>) {
     val model = args[0]
