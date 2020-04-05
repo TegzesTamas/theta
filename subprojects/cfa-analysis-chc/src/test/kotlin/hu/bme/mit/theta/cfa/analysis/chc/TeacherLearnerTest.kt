@@ -163,4 +163,41 @@ class TeacherLearnerTest {
             }
         }
     }
+
+    @Test(expected = ContradictoryException::class)
+    fun unsplittableDatapointsTest() {
+        val cfaBuilder = CFA.builder()
+
+        val initL = cfaBuilder.createLoc("init")
+        cfaBuilder.initLoc = initL
+        val initX = cfaBuilder.createLoc("initX")
+        val initY = cfaBuilder.createLoc("initY")
+        val l1 = cfaBuilder.createLoc("Loop_1")
+        val initZ = cfaBuilder.createLoc("initZ")
+        val l2 = cfaBuilder.createLoc("Loop_2")
+        val errorLoc = cfaBuilder.createLoc("error")
+        cfaBuilder.errorLoc = errorLoc
+        val finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.finalLoc = finalLoc
+
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        val z = DeclManager.getVar("z", Int())
+
+
+        cfaBuilder.createEdge(initL, initX, Assign(x, Int(2)))
+        cfaBuilder.createEdge(initX, initY, Assign(y, Int(2)))
+        cfaBuilder.createEdge(initY, l1, Skip())
+        cfaBuilder.createEdge(l1, l1, Skip())
+        cfaBuilder.createEdge(l1, initZ, Assign(z, x.ref))
+        cfaBuilder.createEdge(initZ, l2, Skip())
+        cfaBuilder.createEdge(l2, l2, Skip())
+        cfaBuilder.createEdge(l2, errorLoc, Assume(And(Eq(x.ref, Int(2)), Eq(y.ref, Int(2)), Eq(z.ref, Int(2)))))
+        cfaBuilder.createEdge(l2, finalLoc, Assume(Or(Neq(x.ref, Int(2)), Neq(y.ref, Int(2)), Neq(z.ref, Int(2)))))
+
+        val cfa = cfaBuilder.build()
+        val chcSystem = cfaToChc(cfa)
+
+        findInvariantsFor(chcSystem, solver)
+    }
 }
