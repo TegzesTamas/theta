@@ -147,7 +147,8 @@ class ConstraintSystem private constructor(
         private fun makeNegativeDeductions() {
             do {
                 val newExistentiallyFalse = constraints.asSequence()
-                        .filter { it.target in existentiallyFalse }
+                        .filter { it.source.none { dp -> dp in existentiallyFalse } }
+                        .filter { it.target == null || it.target in existentiallyFalse }
                         .flatMap {
                             it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
                                     ?.let { source -> sequenceOf(source) }
@@ -155,7 +156,8 @@ class ConstraintSystem private constructor(
                         }
                         .toSet()
                 val newUniversallyFalse = constraints.asSequence()
-                        .filter { it.target in universallyFalse }
+                        .filter { it.source.none { dp -> dp in universallyFalse } }
+                        .filter { it.target == null || it.target in universallyFalse }
                         .flatMap {
                             it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
                                     ?.let { source -> sequenceOf(source) }
