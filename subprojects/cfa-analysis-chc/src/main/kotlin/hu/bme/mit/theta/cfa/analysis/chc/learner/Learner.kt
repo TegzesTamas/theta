@@ -1,6 +1,8 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
+import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner.Universality.EXISTENTIAL
+import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner.Universality.UNIVERSAL
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsFalse
@@ -12,18 +14,24 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.InvariantDecision
 import hu.bme.mit.theta.core.decl.Decl
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
-import hu.bme.mit.theta.core.type.inttype.IntExprs.*
+import hu.bme.mit.theta.core.type.inttype.IntExprs.Eq
+import hu.bme.mit.theta.core.type.inttype.IntExprs.Leq
 import hu.bme.mit.theta.core.type.inttype.IntLitExpr
 import hu.bme.mit.theta.core.type.inttype.IntType
 import kotlin.math.min
 
 class Learner(private var constraintSystem: ConstraintSystem) {
+    enum class Universality {
+        UNIVERSAL,
+        EXISTENTIAL
+    }
+
     fun buildTree(): DecisionTree {
 
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
-        data class SetToProcess(val datapoints: Map<Datapoint, Boolean>, val slot: ParentSlot?)
+        data class SetToProcess(val datapoints: Map<Datapoint, Universality>, val slot: ParentSlot?)
 
-        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.asSequence().map { it to true }.toMap(), null))
+        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.asSequence().map { it to UNIVERSAL }.toMap(), null))
         val ready = mutableListOf<BuildNode>()
         while (toProcess.isNotEmpty()) {
             val (currDps, parentSlot) = toProcess.removeAt(0)
@@ -34,9 +42,17 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             if (leaf != null) {
                 node = LeafBuildNode(leaf)
             } else {
-                val decision = findSplittingDecision(currDps.keys)
-                val ifTrue = currDps.asSequence().filter { decision.datapointCanBeTrue(it.key) }.map { it.key to (it.value || decision.datapointCanBeFalse(it.key)) }.toMap()
-                val ifFalse = currDps.asSequence().filter { decision.datapointCanBeFalse(it.key) }.map { it.key to (it.value || decision.datapointCanBeTrue(it.key)) }.toMap()
+                val decision = findSplittingDecision(currDps)
+                val ifTrue = currDps.asSequence()
+                        .filter { decision.datapointCanBeTrue(it.key) }
+                        .map {
+                            it.key to ((if (it.value == EXISTENTIAL || decision.datapointCanBeFalse(it.key)) EXISTENTIAL else UNIVERSAL))
+                        }.toMap()
+                val ifFalse = currDps.asSequence()
+                        .filter { decision.datapointCanBeFalse(it.key) }
+                        .map {
+                            it.key to ((if (it.value == EXISTENTIAL || decision.datapointCanBeTrue(it.key)) EXISTENTIAL else UNIVERSAL))
+                        }.toMap()
                 node = BranchBuildNode(decision)
                 if (DEBUG) {
                     if (ifTrue == currDps || ifFalse == currDps) {
@@ -61,15 +77,15 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         return DecisionTree(ready[0].built!!)
     }
 
-    private fun tryToLabel(datapoints: Map<Datapoint, Boolean>): DecisionTree.Leaf? {
+    private fun tryToLabel(datapoints: Map<Datapoint, Universality>): DecisionTree.Leaf? {
         if (datapoints.keys.all { it in constraintSystem.universallyTrue }) {
             return DecisionTree.Leaf(true)
         }
         if (datapoints.keys.all { it in constraintSystem.universallyFalse }) {
             return DecisionTree.Leaf(false)
         }
-        val universalDps = datapoints.filterValues { it }.keys
-        val existentialDps = datapoints.filterValues { !it }.keys
+        val universalDps = datapoints.filterValues { it == UNIVERSAL }.keys
+        val existentialDps = datapoints.filterValues { it == EXISTENTIAL }.keys
         val couldBeLabeledTrue =
                 universalDps.none { it in constraintSystem.existentiallyFalse }
                         && existentialDps.none { it in constraintSystem.universallyFalse }
@@ -92,16 +108,17 @@ class Learner(private var constraintSystem: ConstraintSystem) {
     }
 
 
-    private fun findSplittingDecision(datapointsToSplit: Set<Datapoint>): Decision {
+    private fun findSplittingDecision(datapointsToSplit: Map<Datapoint, Universality>): Decision {
         require(datapointsToSplit.size > 1) { "At least two datapoints needed." }
-        val allInvariants = datapointsToSplit.map { it.invariant }.toMutableSet()
+        val rawDatapoints = datapointsToSplit.keys
+        val allInvariants = rawDatapoints.map { it.invariant }.toSet()
 
         if (allInvariants.size > 1) {
             val chosenInvariants = allInvariants.take(allInvariants.size / 2).toSet()
             return InvariantDecision(chosenInvariants)
         }
 
-        val variableToOccurrences = datapointsToSplit.asSequence()
+        val variableToOccurrences = rawDatapoints.asSequence()
                 .flatMap { datapoint ->
                     datapoint.valuation.toMap()
                             .asSequence()
@@ -114,31 +131,49 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                             .filterNotNull()
                 }
                 .groupBy { it.variable }
+                .mapValues { (_, occurrences) -> occurrences.groupBy { it.lit } }
 
         var bestExpr: Expr<BoolType>? = null
         var bestError: Double? = null
 
         for ((variable, occurrences) in variableToOccurrences) {
-            val (expr, error) = findBestSplitForVariable(variable, occurrences, datapointsToSplit)
-            if (bestError == null || error < bestError) {
-                bestExpr = expr
-                bestError = error
+            if (occurrences.size > 1) {
+                val bestSplit = findBestSplitForVariable(variable, occurrences, rawDatapoints)
+                if (bestSplit != null) {
+                    val (expr, error) = bestSplit
+                    if (bestError == null || error < bestError) {
+                        bestExpr = expr
+                        bestError = error
+                    }
+                }
             }
         }
         if (bestExpr != null && bestError != null) {
             return ExprDecision(bestExpr)
         } else {
+            datapointsToSplit.entries.asSequence()
+                    .filter { it.value == UNIVERSAL }
+                    .forEach { (universalDatapoint, _) ->
+                        //Find a variable not in universalDatapoint
+                        variableToOccurrences.entries
+                                .firstOrNull { (variable, _) ->
+                                    !universalDatapoint.valuation.decls.contains(variable)
+                                }?.let { (splittingVariable, occurrences) ->
+                                    //Split by that variable
+                                    return ExprDecision(Leq(splittingVariable.ref, occurrences.keys.first()))
+                                }
+                    }
             error("No viable split was found")
         }
     }
 
     private fun findBestSplitForVariable(
             variable: Decl<IntType>,
-            occurrences: Iterable<VariableOccurrence>,
+            occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
             datapointsToSplit: Set<Datapoint>
-    ): Pair<Expr<BoolType>, Double> {
+    ): Pair<Expr<BoolType>, Double>? {
         //In splittableDps, every datapoint occurs at most once, because it assigns at most one value to a variable
-        val splittableDps = occurrences.map { it.datapoint }
+        val splittableDps = occurrencesByLit.values.flatMap { it.map { occurrence -> occurrence.datapoint } }
         val (splittableTrue, splittableFalse) = calcForcedLabeling(splittableDps)
         val unsplittableDps = datapointsToSplit - splittableDps
         val (unsplittableTrue, unsplittableFalse) = calcForcedLabeling(unsplittableDps)
@@ -153,8 +188,6 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         var bestExpr: Expr<BoolType>? = null
         var bestError: Double? = null
 
-
-        val occurrencesByLit = occurrences.groupBy { it.value }
 
         val orderedLiterals = occurrencesByLit.entries.asSequence().sortedBy { it.key.value }
 
@@ -192,21 +225,14 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 bestError = eqError
             }
         }
-        if (bestError == null || bestExpr == null) {
-            // Expr and error, for which none of the occurrences match
-            val smallestLit: IntLitExpr = occurrences.firstOrNull()?.value ?: IntLitExpr.of(0)
-            val defExpr = Lt(variable.ref, smallestLit)
-            val defError =
-                    classificationError(unsplittableTrue, unsplittableFalse, unsplittableDps.size) +
-                            classificationError(unsplittableTrue + splittableTrue,
-                                    unsplittableFalse + splittableFalse,
-                                    datapointsToSplit.size)
-            return defExpr to defError
+        return if (bestError == null || bestExpr == null) {
+            null
+        } else {
+            bestExpr to bestError
         }
-        return bestExpr to bestError
     }
 
-    private data class VariableOccurrence(val variable: Decl<IntType>, val value: IntLitExpr, val datapoint: Datapoint)
+    private data class VariableOccurrence(val variable: Decl<IntType>, val lit: IntLitExpr, val datapoint: Datapoint)
     private data class ForcedLabeling(val mustBeTrue: Int, val mustBeFalse: Int)
 
     private fun calcForcedLabeling(dps: Iterable<Datapoint>): ForcedLabeling {
