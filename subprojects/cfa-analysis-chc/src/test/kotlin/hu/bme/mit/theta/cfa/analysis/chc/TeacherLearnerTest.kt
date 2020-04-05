@@ -4,10 +4,10 @@ import hu.bme.mit.theta.cfa.CFA
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.findInvariantsFor
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
-import hu.bme.mit.theta.core.stmt.AssignStmt
-import hu.bme.mit.theta.core.stmt.AssumeStmt
-import hu.bme.mit.theta.core.type.inttype.IntExprs
-import hu.bme.mit.theta.core.type.inttype.IntNeqExpr
+import hu.bme.mit.theta.core.stmt.Stmts.*
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.Or
+import hu.bme.mit.theta.core.type.inttype.IntExprs.*
 import hu.bme.mit.theta.solver.Solver
 import hu.bme.mit.theta.solver.SolverStatus
 import hu.bme.mit.theta.solver.utils.WithPushPop
@@ -31,15 +31,17 @@ class TeacherLearnerTest {
         val initLoc = cfaBuilder.createLoc("init")
         cfaBuilder.initLoc = initLoc
         val errorLoc = cfaBuilder.createLoc("error")
-        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
         cfaBuilder.errorLoc = errorLoc
+        val finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.finalLoc = finalLoc
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("x", IntExprs.Int())
+        val x = DeclManager.getVar("x", Int())
 
-        cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
-        cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
+        cfaBuilder.createEdge(initLoc, midLoc, Assign(x, Int(0)))
+        cfaBuilder.createEdge(midLoc, errorLoc, Assume(Neq(x.ref, Int(0))))
+        cfaBuilder.createEdge(midLoc, finalLoc, Assume(Eq(x.ref, Int(0))))
 
         val cfa = cfaBuilder.build()
 
@@ -61,21 +63,24 @@ class TeacherLearnerTest {
         val initLoc = cfaBuilder.createLoc("init")
         cfaBuilder.initLoc = initLoc
         val errorLoc = cfaBuilder.createLoc("error")
-        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
         cfaBuilder.errorLoc = errorLoc
+        val finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.finalLoc = finalLoc
 
         val leftLoc = cfaBuilder.createLoc("left")
         val rightLoc = cfaBuilder.createLoc("right")
 
-        val x = DeclManager.getVar("x", IntExprs.Int())
-        val y = DeclManager.getVar("y", IntExprs.Int())
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
 
 
-        cfaBuilder.createEdge(initLoc, leftLoc, AssignStmt.of(x, IntExprs.Int(0)))
-        cfaBuilder.createEdge(leftLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
+        cfaBuilder.createEdge(initLoc, leftLoc, Assign(x, Int(0)))
+        cfaBuilder.createEdge(leftLoc, errorLoc, Assume(Neq(x.ref, Int(0))))
+        cfaBuilder.createEdge(leftLoc, finalLoc, Assume(Eq(x.ref, Int(0))))
 
-        cfaBuilder.createEdge(initLoc, rightLoc, AssignStmt.of(y, IntExprs.Int(0)))
-        cfaBuilder.createEdge(rightLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(y.ref, IntExprs.Int(0))))
+        cfaBuilder.createEdge(initLoc, rightLoc, Assign(y, Int(0)))
+        cfaBuilder.createEdge(rightLoc, errorLoc, Assume(Neq(y.ref, Int(0))))
+        cfaBuilder.createEdge(rightLoc, finalLoc, Assume(Eq(y.ref, Int(0))))
 
 
         val cfa = cfaBuilder.build()
@@ -99,20 +104,23 @@ class TeacherLearnerTest {
         val initLoc = cfaBuilder.createLoc("init")
         cfaBuilder.initLoc = initLoc
         val errorLoc = cfaBuilder.createLoc("error")
-        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
         cfaBuilder.errorLoc = errorLoc
+        val finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.finalLoc = finalLoc
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("x", IntExprs.Int())
-        val y = DeclManager.getVar("y", IntExprs.Int())
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
 
 
-        cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
-        cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
+        cfaBuilder.createEdge(initLoc, midLoc, Assign(x, Int(0)))
+        cfaBuilder.createEdge(midLoc, errorLoc, Assume(Neq(x.ref, Int(0))))
 
-        cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(y, IntExprs.Int(0)))
-        cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(y.ref, IntExprs.Int(0))))
+        cfaBuilder.createEdge(initLoc, midLoc, Assign(y, Int(0)))
+        cfaBuilder.createEdge(midLoc, errorLoc, Assume(Neq(y.ref, Int(0))))
+
+        cfaBuilder.createEdge(midLoc, finalLoc, Assume(And(Eq(x.ref, Int(0)), Eq(y.ref, Int(0)))))
 
 
         val cfa = cfaBuilder.build()
@@ -129,17 +137,19 @@ class TeacherLearnerTest {
         val initLoc = cfaBuilder.createLoc("init")
         cfaBuilder.initLoc = initLoc
         val errorLoc = cfaBuilder.createLoc("error")
-        cfaBuilder.finalLoc = cfaBuilder.createLoc("final")
         cfaBuilder.errorLoc = errorLoc
+        val finalLoc = cfaBuilder.createLoc("final")
+        cfaBuilder.finalLoc = finalLoc
 
         val midLoc = cfaBuilder.createLoc("middle")
 
-        val x = DeclManager.getVar("x", IntExprs.Int())
-        val y = DeclManager.getVar("y", IntExprs.Int())
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
 
-        cfaBuilder.createEdge(initLoc, midLoc, AssignStmt.of(x, IntExprs.Int(0)))
-        cfaBuilder.createEdge(midLoc, errorLoc, AssumeStmt.of(IntNeqExpr.of(x.ref, IntExprs.Int(0))))
-        cfaBuilder.createEdge(midLoc, midLoc, AssignStmt.of(y, IntExprs.Add(y.ref, IntExprs.Int(1))))
+        cfaBuilder.createEdge(initLoc, midLoc, Assign(x, Int(0)))
+        cfaBuilder.createEdge(midLoc, errorLoc, Assume(Neq(x.ref, Int(0))))
+        cfaBuilder.createEdge(midLoc, midLoc, Assign(y, Add(y.ref, Int(1))))
+        cfaBuilder.createEdge(midLoc, finalLoc, Assume(Lt(y.ref, Int(0))))
 
         val cfa = cfaBuilder.build()
         val chcSystem = cfaToChc(cfa)
