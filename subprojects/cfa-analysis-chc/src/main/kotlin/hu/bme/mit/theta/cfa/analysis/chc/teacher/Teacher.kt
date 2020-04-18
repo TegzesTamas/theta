@@ -7,7 +7,6 @@ import hu.bme.mit.theta.cfa.analysis.chc.addCHC
 import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.solver.Solver
 import hu.bme.mit.theta.solver.SolverStatus.SAT
 import hu.bme.mit.theta.solver.utils.WithPushPop
@@ -37,14 +36,8 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
                     if (DEBUG) println("Unsatisfiable CHC: $chc")
                     allUnsat = false
                     val model = solver.model
-                    val (preDatapoint, postDatapoint) = chc.datapoints(model)
-                    val source: List<Datapoint>
-                    if (preDatapoint != null) {
-                        source = listOf(preDatapoint)
-                    } else {
-                        source = emptyList()
-                    }
-                    val newConstraint = Constraint(source, postDatapoint)
+                    val (source, target) = chc.datapoints(model)
+                    val newConstraint = Constraint(source, target)
                     if (DEBUG) {
                         println("Adding Constraint: $newConstraint")
                         println()

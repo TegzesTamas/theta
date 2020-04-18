@@ -3,7 +3,6 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.model.MutableValuation
@@ -17,22 +16,6 @@ import org.junit.Test
 
 
 internal class DecisionTreeTest {
-
-    @Test(expected = ContradictoryException::class)
-    fun contradictoryTest() {
-        val dpA = Datapoint(Invariant("A"), MutableValuation())
-        val dpB = Datapoint(Invariant("B"), MutableValuation())
-        val dpC = Datapoint(Invariant("C"), MutableValuation())
-        val dpD = Datapoint(Invariant("D"), MutableValuation())
-        val constraintSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(emptyList(), dpA))
-                .addConstraint(Constraint(listOf(dpA, dpB, dpC, dpD), null))
-                .addConstraint(Constraint(listOf(dpA), dpB))
-                .addConstraint(Constraint(listOf(dpA, dpB), dpD))
-                .addConstraint(Constraint(listOf(dpD, dpB), dpC))
-                .build()
-        Learner(constraintSystem).buildTree()
-    }
 
     @Test
     fun splitByVariableValueTest() {
@@ -50,8 +33,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariant, valuationB)
 
         val constraintsSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(emptyList(), dpA))
-                .addConstraint(Constraint(listOf(dpB), null))
+                .addConstraint(Constraint(null, dpA))
+                .addConstraint(Constraint(dpB, null))
                 .build()
 
         val tree = Learner(constraintsSystem).buildTree()
@@ -82,8 +65,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariantB, valuationB)
 
         val constraintSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(emptyList(), dpA))
-                .addConstraint(Constraint(listOf(dpB), null))
+                .addConstraint(Constraint(null, dpA))
+                .addConstraint(Constraint(dpB, null))
                 .build()
 
         val tree = Learner(constraintSystem).buildTree()
@@ -94,47 +77,5 @@ internal class DecisionTreeTest {
         Assert.assertEquals(0, exprB.arity)
         val notConstantOps = exprA.ops.first().ops.filter { it != True() }
         Assert.assertEquals(0, notConstantOps.size)
-    }
-
-    @Test(expected = ContradictoryException::class)
-    fun intersectionContradiction() {
-        val x = DeclManager.getVar("x", Int())
-        val y = DeclManager.getVar("y", Int())
-        val z = DeclManager.getVar("z", Int())
-
-        val inv = Invariant("A")
-
-        val valA = MutableValuation().apply {
-            put(x, Int(2))
-            put(y, Int(3))
-        }
-        val dpA = Datapoint(inv, valA)
-        val valB = MutableValuation().apply {
-            put(x, Int(2))
-            put(z, Int(32))
-        }
-        val dpB = Datapoint(inv, valB)
-        val valC = MutableValuation().apply {
-            put(x, Int(18))
-            put(y, Int(12))
-            put(z, Int(98))
-        }
-        val dpC = Datapoint(inv, valC)
-        val valD = MutableValuation().apply {
-            put(y, Int(12))
-            put(z, Int(98))
-        }
-        val dpD = Datapoint(inv, valD)
-
-        val build = ConstraintSystem.Builder()
-                .addConstraint(Constraint(emptyList(), dpA))
-                .addConstraint(Constraint(listOf(dpB), dpC))
-                .addConstraint(Constraint(listOf(dpD), null))
-                .build()
-
-        println("Universally true: ${build.universallyTrue}")
-        println("Existentially true: ${build.existentiallyTrue}")
-        println("Universally false: ${build.universallyFalse}")
-        println("Existentially false: ${build.existentiallyFalse}")
     }
 }

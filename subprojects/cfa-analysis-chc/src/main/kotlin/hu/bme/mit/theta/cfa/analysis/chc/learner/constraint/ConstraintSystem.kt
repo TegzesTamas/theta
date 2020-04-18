@@ -8,10 +8,10 @@ class ConstraintSystem private constructor(
         val constraints: List<Constraint>,
         val datapoints: Set<Datapoint>,
         var ambiguousDatapoints: Set<Datapoint>,
-        val existentiallyTrue: Map<Datapoint?, Constraint>,
-        val universallyTrue: Map<Datapoint?, Constraint>,
-        val existentiallyFalse: Set<Datapoint?>,
-        val universallyFalse: Set<Datapoint?>
+        val existentiallyTrue: Map<Datapoint, Constraint>,
+        val universallyTrue: Map<Datapoint, Constraint>,
+        val existentiallyFalse: Set<Datapoint>,
+        val universallyFalse: Set<Datapoint>
 ) {
     class Builder {
         private val constraints: MutableList<Constraint>
@@ -19,10 +19,10 @@ class ConstraintSystem private constructor(
 
         private var ambiguousDatapoints: MutableSet<Datapoint>
 
-        private val existentiallyTrue: MutableMap<Datapoint?, Constraint>
-        private val universallyTrue: MutableMap<Datapoint?, Constraint>
-        private val existentiallyFalse: MutableSet<Datapoint?>
-        private val universallyFalse: MutableSet<Datapoint?>
+        private val existentiallyTrue: MutableMap<Datapoint, Constraint>
+        private val universallyTrue: MutableMap<Datapoint, Constraint>
+        private val existentiallyFalse: MutableSet<Datapoint>
+        private val universallyFalse: MutableSet<Datapoint>
 
         constructor() {
             constraints = mutableListOf()
@@ -48,13 +48,13 @@ class ConstraintSystem private constructor(
         @Throws(ContradictoryException::class)
         fun addConstraint(constraint: Constraint): Builder {
             constraints.add(constraint)
-            datapoints.addAll(constraint.source)
-            for (newDp in constraint.source) {
-                classifyNewDatapoint(newDp)
+            constraint.source?.let { source ->
+                datapoints += source
+                classifyNewDatapoint(source)
             }
             constraint.target?.let { target ->
                 datapoints += target
-                classifyNewDatapoint(constraint.target)
+                classifyNewDatapoint(target)
             }
             makePositiveDeductions()
             return this
@@ -68,15 +68,14 @@ class ConstraintSystem private constructor(
                 throw ContradictoryException(emptyList(), "Cannot set datapoint true, because it is already forced false")
             }
             val dummyDp = Datapoint(Invariant("setDatapointsTrue"), MutableValuation())
-            val dummyConstraint = Constraint(emptyList(), dummyDp)
+            val dummyConstraint = Constraint(null, dummyDp)
             universallyTrue[dummyDp] = dummyConstraint
             existentiallyTrue[dummyDp] = dummyConstraint
-            val dummySource = listOf(dummyDp)
             existentialDps.asSequence()
-                    .map { it to Constraint(dummySource, it) }
+                    .map { it to Constraint(dummyDp, it) }
                     .toMap(existentiallyTrue)
             val universalMap = universalDps.asSequence()
-                    .map { it to Constraint(dummySource, it) }
+                    .map { it to Constraint(dummyDp, it) }
             existentiallyTrue.putAll(universalMap)
             universallyTrue.putAll(universalMap)
             makePositiveDeductions()
@@ -114,34 +113,38 @@ class ConstraintSystem private constructor(
             do {
                 val newExistentiallyTrue = constraints.asSequence()
                         .filter { !existentiallyTrue.containsKey(it.target) }
-                        .filter { existentiallyTrue.keys.containsAll(it.source) }
-                        .map { it.target to it }
+                        .filter { it.source == null || existentiallyTrue.containsKey(it.source) }
+                        .map {
+                            it.target?.let { target -> target to it }
+                                    ?: throw ContradictoryException(retraceDeductions(it))
+                        }
                         .toMap()
                 val newUniversallyTrue = constraints.asSequence()
-                        .filter { universallyTrue.keys.containsAll(it.source) }
-                        .map { it.target to it }
+                        .filter { !universallyTrue.containsKey(it.target) }
+                        .filter { it.source == null || universallyTrue.containsKey(it.source) }
+                        .map {
+                            it.target?.let { target -> target to it }
+                                    ?: throw ContradictoryException(retraceDeductions(it))
+                        }
                         .toMap()
-                newExistentiallyTrue[null]?.let {
-                    throw ContradictoryException(retraceDeductions(it))
-                }
                 existentiallyTrue.putAll(newExistentiallyTrue)
                 universallyTrue.putAll(newUniversallyTrue)
                 val stillAmbiguous = mutableSetOf<Datapoint>()
                 for (ambiguous in ambiguousDatapoints) {
                     val superSetEntry = newUniversallyTrue.entries
-                            .firstOrNull { (dp, _) -> dp != null && ambiguous.subsetOf(dp) }
+                            .firstOrNull { (dp, _) -> ambiguous.subsetOf(dp) }
                     if (superSetEntry != null) {
                         universallyTrue[ambiguous] = superSetEntry.value
                         existentiallyTrue[ambiguous] = superSetEntry.value
                     } else {
                         stillAmbiguous.add(ambiguous)
                         val nonDisjointEntry = newUniversallyTrue.entries
-                                .firstOrNull { (dp, _) -> dp != null && !dp.disjoint(ambiguous) }
+                                .firstOrNull { (dp, _) -> !dp.disjoint(ambiguous) }
                         if (nonDisjointEntry != null) {
                             existentiallyTrue[ambiguous] = nonDisjointEntry.value
                         } else {
-                            val subsetEntry = newUniversallyTrue.entries
-                                    .firstOrNull { (dp, _) -> dp != null && dp.subsetOf(ambiguous) }
+                            val subsetEntry = newExistentiallyTrue.entries
+                                    .firstOrNull { (dp, _) -> dp.subsetOf(ambiguous) }
                             if (subsetEntry != null) {
                                 existentiallyTrue[ambiguous] = subsetEntry.value
                             }
@@ -156,22 +159,14 @@ class ConstraintSystem private constructor(
         private fun makeNegativeDeductions() {
             do {
                 val newExistentiallyFalse = constraints.asSequence()
-                        .filter { it.source.none { dp -> dp in existentiallyFalse } }
+                        .filter { !existentiallyFalse.contains(it.source) }
                         .filter { it.target == null || it.target in existentiallyFalse }
-                        .flatMap {
-                            it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
-                                    ?.let { source -> sequenceOf(source) }
-                                    ?: emptySequence()
-                        }
+                        .map { it.source ?: error("Negative deductions revealed inconsistency.") }
                         .toSet()
                 val newUniversallyFalse = constraints.asSequence()
-                        .filter { it.source.none { dp -> dp in universallyFalse } }
+                        .filter { !universallyFalse.contains(it.source) }
                         .filter { it.target == null || it.target in universallyFalse }
-                        .flatMap {
-                            it.source.singleOrNull { dp -> !universallyTrue.containsKey(dp) }
-                                    ?.let { source -> sequenceOf(source) }
-                                    ?: emptySequence()
-                        }
+                        .map { it.source ?: error("Negative deductions revealed inconsistency.") }
                         .toSet()
                 val stillAmbiguous = mutableSetOf<Datapoint>()
                 for (ambiguous in ambiguousDatapoints) {
@@ -197,7 +192,9 @@ class ConstraintSystem private constructor(
             val reasons = mutableListOf<Constraint>()
             while (questions.isNotEmpty()) {
                 val question = questions.removeAt(questions.lastIndex)
-                question.source.mapTo(questions) { dp -> existentiallyTrue[dp] ?: error("Unreasoned deduction") }
+                question.source?.let { source ->
+                    questions += existentiallyTrue[source] ?: error("Unreasoned deduction")
+                }
                 reasons.add(question)
             }
             reasons.reverse()
@@ -207,14 +204,14 @@ class ConstraintSystem private constructor(
         private fun classifyNewDatapoint(newDp: Datapoint) {
             val trueSuperSetEntry = universallyTrue
                     .entries
-                    .firstOrNull { (trueDp, _) -> trueDp != null && newDp.subsetOf(trueDp) }
+                    .firstOrNull { (trueDp, _) -> newDp.subsetOf(trueDp) }
             if (trueSuperSetEntry != null) {
                 universallyTrue[newDp] = trueSuperSetEntry.value
                 existentiallyTrue[newDp] = trueSuperSetEntry.value
 
             } else {
                 val falseSuperSet = universallyFalse
-                        .firstOrNull { falseDp -> falseDp != null && newDp.subsetOf(falseDp) }
+                        .firstOrNull { falseDp -> newDp.subsetOf(falseDp) }
                 if (falseSuperSet != null) {
                     universallyFalse.add(newDp)
                     existentiallyFalse.add(newDp)
@@ -222,24 +219,24 @@ class ConstraintSystem private constructor(
                     ambiguousDatapoints.add(newDp)
                     val trueSubsetEntry = existentiallyTrue
                             .entries
-                            .firstOrNull { (trueDp, _) -> trueDp != null && trueDp.subsetOf(newDp) }
+                            .firstOrNull { (trueDp, _) -> trueDp.subsetOf(newDp) }
                     if (trueSubsetEntry != null) {
                         existentiallyTrue[newDp] = trueSubsetEntry.value
                     } else {
                         val trueNonDisjointEntry = universallyTrue
                                 .entries
-                                .firstOrNull { (trueDp, _) -> trueDp != null && !trueDp.disjoint(newDp) }
+                                .firstOrNull { (trueDp, _) -> !trueDp.disjoint(newDp) }
                         if (trueNonDisjointEntry != null) {
                             existentiallyTrue[newDp] = trueNonDisjointEntry.value
                         }
                     }
                     val falseSubset = existentiallyFalse
-                            .firstOrNull { falseDp -> falseDp != null && falseDp.subsetOf(newDp) }
+                            .firstOrNull { falseDp -> falseDp.subsetOf(newDp) }
                     if (falseSubset != null) {
                         existentiallyFalse.add(newDp)
                     } else {
                         val falseNonDisjointEntry = universallyFalse
-                                .firstOrNull { falseDp -> falseDp != null && !falseDp.disjoint(newDp) }
+                                .firstOrNull { falseDp -> !falseDp.disjoint(newDp) }
                         if (falseNonDisjointEntry != null) {
                             existentiallyFalse.add(newDp)
                         }

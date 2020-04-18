@@ -12,11 +12,9 @@ class ConstraintSystemTest {
     @Test(expected = ContradictoryException::class)
     fun contradictoryBySimpleDeductionTest() {
         val dpA = Datapoint(Invariant("A"), MutableValuation())
-        val dpB = Datapoint(Invariant("B"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(emptyList(), dpA))
-        builder.addConstraint(Constraint(emptyList(), dpB))
-        builder.addConstraint(Constraint(listOf(dpA, dpB), null))
+        builder.addConstraint(Constraint(null, dpA))
+        builder.addConstraint(Constraint(dpA, null))
         builder.build()
     }
 
@@ -26,9 +24,9 @@ class ConstraintSystemTest {
         val dpB = Datapoint(Invariant("B"), MutableValuation())
         val dpC = Datapoint(Invariant("C"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(emptyList(), dpA))
-        builder.addConstraint(Constraint(emptyList(), dpB))
-        builder.addConstraint(Constraint(listOf(dpA, dpB, dpC), null))
+        builder.addConstraint(Constraint(null, dpA))
+        builder.addConstraint(Constraint(null, dpB))
+        builder.addConstraint(Constraint(dpC, null))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -45,8 +43,8 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(emptyList(), dpA))
-        builder.addConstraint(Constraint(listOf(dpB), null))
+        builder.addConstraint(Constraint(null, dpA))
+        builder.addConstraint(Constraint(dpB, null))
         builder.build()
     }
 
@@ -61,9 +59,9 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(emptyList(), dpA))
-        builder.addConstraint(Constraint(listOf(dpB), dpC))
-        builder.addConstraint(Constraint(listOf(dpD), null))
+        builder.addConstraint(Constraint(null, dpA))
+        builder.addConstraint(Constraint(dpB, dpC))
+        builder.addConstraint(Constraint(dpD, null))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -100,6 +98,43 @@ class ConstraintSystemTest {
     private fun ConstraintSystem.assertExistentiallyFalse(dp: Datapoint) {
         assertTrue("Some datapoint must be existentially false, but was not found to be",
                 dp in existentiallyFalse)
+    }
+
+    @Test(expected = ContradictoryException::class)
+    fun intersectionContradiction() {
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        val z = DeclManager.getVar("z", Int())
+
+        val inv = Invariant("A")
+
+        val valA = MutableValuation().apply {
+            put(x, Int(2))
+            put(y, Int(3))
+        }
+        val dpA = Datapoint(inv, valA)
+        val valB = MutableValuation().apply {
+            put(x, Int(2))
+            put(z, Int(32))
+        }
+        val dpB = Datapoint(inv, valB)
+        val valC = MutableValuation().apply {
+            put(x, Int(18))
+            put(y, Int(12))
+            put(z, Int(98))
+        }
+        val dpC = Datapoint(inv, valC)
+        val valD = MutableValuation().apply {
+            put(y, Int(12))
+            put(z, Int(98))
+        }
+        val dpD = Datapoint(inv, valD)
+
+        ConstraintSystem.Builder()
+                .addConstraint(Constraint(null, dpA))
+                .addConstraint(Constraint(dpB, dpC))
+                .addConstraint(Constraint(dpD, null))
+                .build()
     }
 
 }
