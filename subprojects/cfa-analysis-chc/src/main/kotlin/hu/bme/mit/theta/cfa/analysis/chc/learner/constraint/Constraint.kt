@@ -1,16 +1,59 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner.constraint
 
+import hu.bme.mit.theta.cfa.analysis.chc.CHC
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
+import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.model.Valuation
 
-data class Constraint(val source: Datapoint?, val target: Datapoint?) {
+data class Constraint(val source: Datapoint?, val target: Datapoint?, val causingCHC: CHC) {
     override fun toString(): String = "[$source -> $target]"
 }
 
 data class Datapoint(val invariant: Invariant, val valuation: Valuation) {
     override fun toString(): String = "$invariant(${valuation.toMap()})"
 }
+
+fun Constraint.deducePositively(forcedTrue: Datapoint): Datapoint? {
+    if (source == null) {
+        return target
+    }
+    if (source.disjoint(forcedTrue)) {
+        error("Cannot deduce from a disjoint datapoint")
+    }
+    if (target == null) {
+        return null
+    }
+    val intersection = intersection(source.valuation, forcedTrue.valuation)
+    val deducedValuation = MutableValuation()
+    for ((decl, value) in intersection.toMap().entries) {
+        if (decl is VarDecl<*> && causingCHC.postIndexing[decl] == 0) {
+            deducedValuation.put(decl, value)
+        }
+    }
+    return Datapoint(target.invariant, intersection(target.valuation, deducedValuation))
+}
+
+fun Constraint.deduceNegatively(forcedFalse: Datapoint): Datapoint? {
+    if (target == null) {
+        return source
+    }
+    if (target.disjoint(forcedFalse)) {
+        error("Cannot deduce from a disjoint datapoint")
+    }
+    if (source == null) {
+        return null
+    }
+    val intersection = intersection(target.valuation, forcedFalse.valuation)
+    val deducedValuation = MutableValuation()
+    for ((decl, value) in intersection.toMap().entries) {
+        if (decl is VarDecl<*> && causingCHC.postIndexing[decl] == 0) {
+            deducedValuation.put(decl, value)
+        }
+    }
+    return Datapoint(source.invariant, intersection(source.valuation, deducedValuation))
+}
+
 
 /**
  * Returns whether this datapoint can be separated from the other by a decision.

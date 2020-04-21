@@ -1,5 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
+import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
@@ -33,8 +34,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariant, valuationB)
 
         val constraintsSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA))
-                .addConstraint(Constraint(dpB, null))
+                .addConstraint(Constraint(null, dpA, DummyCHC))
+                .addConstraint(Constraint(dpB, null, DummyCHC))
                 .build()
 
         val tree = Learner(constraintsSystem).buildTree()
@@ -65,8 +66,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariantB, valuationB)
 
         val constraintSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA))
-                .addConstraint(Constraint(dpB, null))
+                .addConstraint(Constraint(null, dpA, DummyCHC))
+                .addConstraint(Constraint(dpB, null, DummyCHC))
                 .build()
 
         val tree = Learner(constraintSystem).buildTree()

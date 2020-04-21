@@ -1,5 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner.constraint
 
+import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.model.MutableValuation
@@ -9,12 +10,37 @@ import org.junit.Test
 
 class ConstraintSystemTest {
 
+    private fun ConstraintSystem.assertValid() {
+        assertTrue("Some datapoint forced also true and false", forcedTrue.keys.none { forcedFalse.contains(it) })
+        assertTrue("Some datapoint forced also true and false", forcedFalse.none { forcedTrue.containsKey(it) })
+    }
+
+    private fun ConstraintSystem.assertUniversallyTrue(dp: Datapoint) {
+        assertTrue("Some datapoint must be universally true, but was not found to be",
+                forcedTrue.containsKey(dp))
+    }
+
+    private fun ConstraintSystem.assertExistentiallyTrue(dp: Datapoint) {
+        assertTrue("Some datapoint must be existentially true, but was not found to be",
+                datapoints[dp]?.any { forcedTrue.containsKey(it) } ?: false)
+    }
+
+    private fun ConstraintSystem.assertUniversallyFalse(dp: Datapoint) {
+        assertTrue("Some datapoint must be universally false, but was not found to be",
+                forcedFalse.contains(dp))
+    }
+
+    private fun ConstraintSystem.assertExistentiallyFalse(dp: Datapoint) {
+        assertTrue("Some datapoint must be existentially false, but was not found to be",
+                datapoints[dp]?.any { forcedFalse.contains(it) } ?: false)
+    }
+
     @Test(expected = ContradictoryException::class)
     fun contradictoryBySimpleDeductionTest() {
         val dpA = Datapoint(Invariant("A"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(null, dpA))
-        builder.addConstraint(Constraint(dpA, null))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC))
+        builder.addConstraint(Constraint(dpA, null, DummyCHC))
         builder.build()
     }
 
@@ -24,9 +50,9 @@ class ConstraintSystemTest {
         val dpB = Datapoint(Invariant("B"), MutableValuation())
         val dpC = Datapoint(Invariant("C"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(null, dpA))
-        builder.addConstraint(Constraint(null, dpB))
-        builder.addConstraint(Constraint(dpC, null))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC))
+        builder.addConstraint(Constraint(null, dpB, DummyCHC))
+        builder.addConstraint(Constraint(dpC, null, DummyCHC))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -43,8 +69,8 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(null, dpA))
-        builder.addConstraint(Constraint(dpB, null))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC))
+        builder.addConstraint(Constraint(dpB, null, DummyCHC))
         builder.build()
     }
 
@@ -59,9 +85,9 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(null, dpA))
-        builder.addConstraint(Constraint(dpB, dpC))
-        builder.addConstraint(Constraint(dpD, null))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC))
+        builder.addConstraint(Constraint(dpB, dpC, DummyCHC))
+        builder.addConstraint(Constraint(dpD, null, DummyCHC))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -71,33 +97,6 @@ class ConstraintSystemTest {
         constraintSystem.assertUniversallyFalse(dpD)
         constraintSystem.assertExistentiallyFalse(dpC)
         constraintSystem.assertExistentiallyFalse(dpB)
-    }
-
-    private fun ConstraintSystem.assertValid() {
-        assertTrue("Some datapoints are universally true, but not existentially true",
-                existentiallyTrue.keys.containsAll(universallyTrue.keys))
-        assertTrue("Some datapoints are universally false, but not existentially false",
-                existentiallyFalse.containsAll(universallyFalse))
-    }
-
-    private fun ConstraintSystem.assertUniversallyTrue(dp: Datapoint) {
-        assertTrue("Some datapoint must be universally true, but was not found to be",
-                dp in universallyTrue.keys)
-    }
-
-    private fun ConstraintSystem.assertExistentiallyTrue(dp: Datapoint) {
-        assertTrue("Some datapoint must be existentially true, but was not found to be",
-                dp in existentiallyTrue.keys)
-    }
-
-    private fun ConstraintSystem.assertUniversallyFalse(dp: Datapoint) {
-        assertTrue("Some datapoint must be universally false, but was not found to be",
-                dp in universallyFalse)
-    }
-
-    private fun ConstraintSystem.assertExistentiallyFalse(dp: Datapoint) {
-        assertTrue("Some datapoint must be existentially false, but was not found to be",
-                dp in existentiallyFalse)
     }
 
     @Test(expected = ContradictoryException::class)
@@ -131,9 +130,9 @@ class ConstraintSystemTest {
         val dpD = Datapoint(inv, valD)
 
         ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA))
-                .addConstraint(Constraint(dpB, dpC))
-                .addConstraint(Constraint(dpD, null))
+                .addConstraint(Constraint(null, dpA, DummyCHC))
+                .addConstraint(Constraint(dpB, dpC, DummyCHC))
+                .addConstraint(Constraint(dpD, null, DummyCHC))
                 .build()
     }
 

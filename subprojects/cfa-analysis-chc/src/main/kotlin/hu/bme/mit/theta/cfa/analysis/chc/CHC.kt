@@ -98,8 +98,9 @@ data class Fact(override val body: AndExpr,
                     BoolExprs.Not(PathUtils.unfold(candidates[postInvariant], postIndexing)))
 
     override fun append(query: Query): SimpleCHC {
-        val newBody = Iterables.concat(body.ops,
-                query.body.ops.map { ExprUtils.applyPrimes(it, postIndexing) })
+        val newBody =
+                Iterables.concat(body.ops,
+                        query.body.ops.map { ExprUtils.applyPrimes(it, postIndexing) })
         val newPostIndexing = postIndexing.transform().add(query.postIndexing.transform()).build()
         return SimpleCHC(AndExpr.of(newBody), newPostIndexing)
     }
@@ -174,4 +175,20 @@ data class SimpleCHC(override val body: AndExpr,
 
     override fun append(query: Query): Nothing? = null
     override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> = null to null
+}
+
+object DummyCHC : CHC {
+    override val body: AndExpr
+        get() = BoolExprs.And(listOf(BoolExprs.True()))
+    override val postIndexing: VarIndexing
+        get() = VarIndexing.all(0)
+    override val invariantsToFind: Set<Invariant>
+        get() = emptySet()
+
+    override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> = BoolExprs.True()
+
+    override fun append(query: Query): CHC? = query
+
+    override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> = null to null
+    override fun toString(): String = "DummyCHC"
 }

@@ -37,7 +37,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
                     allUnsat = false
                     val model = solver.model
                     val (source, target) = chc.datapoints(model)
-                    val newConstraint = Constraint(source, target)
+                    val newConstraint = Constraint(source, target, chc)
                     if (DEBUG) {
                         println("Adding Constraint: $newConstraint")
                         println()

@@ -1,8 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
-import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner.Universality.EXISTENTIAL
-import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner.Universality.UNIVERSAL
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsFalse
@@ -21,17 +19,13 @@ import hu.bme.mit.theta.core.type.inttype.IntType
 import kotlin.math.min
 
 class Learner(private var constraintSystem: ConstraintSystem) {
-    enum class Universality {
-        UNIVERSAL,
-        EXISTENTIAL
-    }
 
     fun buildTree(): DecisionTree {
 
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
-        data class SetToProcess(val datapoints: Map<Datapoint, Universality>, val slot: ParentSlot?)
+        data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)
 
-        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.asSequence().map { it to UNIVERSAL }.toMap(), null))
+        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.keys, null))
         val ready = mutableListOf<BuildNode>()
         while (toProcess.isNotEmpty()) {
             val (currDps, parentSlot) = toProcess.removeAt(0)
@@ -43,16 +37,10 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 node = LeafBuildNode(leaf)
             } else {
                 val decision = findSplittingDecision(currDps)
-                val ifTrue = currDps.asSequence()
-                        .filter { decision.datapointCanBeTrue(it.key) }
-                        .map {
-                            it.key to ((if (it.value == EXISTENTIAL || decision.datapointCanBeFalse(it.key)) EXISTENTIAL else UNIVERSAL))
-                        }.toMap()
-                val ifFalse = currDps.asSequence()
-                        .filter { decision.datapointCanBeFalse(it.key) }
-                        .map {
-                            it.key to ((if (it.value == EXISTENTIAL || decision.datapointCanBeTrue(it.key)) EXISTENTIAL else UNIVERSAL))
-                        }.toMap()
+                val ifTrue: Set<Datapoint> = currDps
+                        .filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) }
+                val ifFalse = currDps
+                        .filterTo(mutableSetOf()) { decision.datapointCanBeFalse(it) }
                 node = BranchBuildNode(decision)
                 if (DEBUG) {
                     if (ifTrue == currDps || ifFalse == currDps) {
@@ -77,29 +65,21 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         return DecisionTree(ready[0].built!!)
     }
 
-    private fun tryToLabel(datapoints: Map<Datapoint, Universality>): DecisionTree.Leaf? {
-        if (datapoints.keys.all { it in constraintSystem.universallyTrue }) {
+    private fun tryToLabel(datapoints: Set<Datapoint>): DecisionTree.Leaf? {
+        if (datapoints.all { constraintSystem.forcedTrue.containsKey(it) }) {
             return DecisionTree.Leaf(true)
         }
-        if (datapoints.keys.all { it in constraintSystem.universallyFalse }) {
+        if (datapoints.all { constraintSystem.forcedFalse.contains(it) }) {
             return DecisionTree.Leaf(false)
         }
-        val universalDps = datapoints.filterValues { it == UNIVERSAL }.keys
-        val existentialDps = datapoints.filterValues { it == EXISTENTIAL }.keys
-        val couldBeLabeledTrue =
-                universalDps.none { it in constraintSystem.existentiallyFalse }
-                        && existentialDps.none { it in constraintSystem.universallyFalse }
-        if (couldBeLabeledTrue) {
-            constraintSystem.tryToSetDatapointsTrue(universalDps, existentialDps)?.let {
+        if (datapoints.none { constraintSystem.forcedFalse.contains(it) }) {
+            constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(true)
             }
         }
-        val couldBeLabeledFalse =
-                universalDps.none { it in constraintSystem.existentiallyTrue }
-                        && existentialDps.none { it in constraintSystem.universallyTrue }
-        if (couldBeLabeledFalse) {
-            constraintSystem.tryToSetDatapointsFalse(universalDps, existentialDps)?.let {
+        if (datapoints.none { constraintSystem.forcedTrue.containsKey(it) }) {
+            constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(false)
             }
@@ -108,17 +88,16 @@ class Learner(private var constraintSystem: ConstraintSystem) {
     }
 
 
-    private fun findSplittingDecision(datapointsToSplit: Map<Datapoint, Universality>): Decision {
+    private fun findSplittingDecision(datapointsToSplit: Set<Datapoint>): Decision {
         require(datapointsToSplit.size > 1) { "At least two datapoints needed." }
-        val rawDatapoints = datapointsToSplit.keys
-        val allInvariants = rawDatapoints.map { it.invariant }.toSet()
+        val allInvariants = datapointsToSplit.map { it.invariant }.toSet()
 
         if (allInvariants.size > 1) {
             val chosenInvariants = allInvariants.take(allInvariants.size / 2).toSet()
             return InvariantDecision(chosenInvariants)
         }
 
-        val variableToOccurrences = rawDatapoints.asSequence()
+        val variableToOccurrences = datapointsToSplit.asSequence()
                 .flatMap { datapoint ->
                     datapoint.valuation.toMap()
                             .asSequence()
@@ -138,7 +117,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
 
         for ((variable, occurrences) in variableToOccurrences) {
             if (occurrences.size > 1) {
-                val bestSplit = findBestSplitForVariable(variable, occurrences, rawDatapoints)
+                val bestSplit = findBestSplitForVariable(variable, occurrences, datapointsToSplit)
                 if (bestSplit != null) {
                     val (expr, error) = bestSplit
                     if (bestError == null || error < bestError) {
@@ -151,18 +130,6 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         if (bestExpr != null && bestError != null) {
             return ExprDecision(bestExpr)
         } else {
-            datapointsToSplit.entries.asSequence()
-                    .filter { it.value == UNIVERSAL }
-                    .forEach { (universalDatapoint, _) ->
-                        //Find a variable not in universalDatapoint
-                        variableToOccurrences.entries
-                                .firstOrNull { (variable, _) ->
-                                    !universalDatapoint.valuation.decls.contains(variable)
-                                }?.let { (splittingVariable, occurrences) ->
-                                    //Split by that variable
-                                    return ExprDecision(Leq(splittingVariable.ref, occurrences.keys.first()))
-                                }
-                    }
             error("No viable split was found")
         }
     }
@@ -195,8 +162,8 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             matchingTotal += currentOccurrences.size
             nonMatchingTotal -= currentOccurrences.size
 
-            val currentTrue = currentOccurrences.count { it.datapoint in constraintSystem.universallyTrue }
-            val currentFalse = currentOccurrences.count { it.datapoint in constraintSystem.universallyFalse }
+            val currentTrue = currentOccurrences.count { it.datapoint in constraintSystem.forcedTrue }
+            val currentFalse = currentOccurrences.count { it.datapoint in constraintSystem.forcedFalse }
 
             leqMatchingTrue += currentTrue
             leqNonMatchingTrue -= currentTrue
@@ -240,8 +207,8 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         var mustBeFalse = 0
         for (dp in dps) {
             when (dp) {
-                in constraintSystem.universallyTrue -> ++mustBeTrue
-                in constraintSystem.universallyFalse -> ++mustBeFalse
+                in constraintSystem.forcedTrue -> ++mustBeTrue
+                in constraintSystem.forcedFalse -> ++mustBeFalse
             }
         }
         return ForcedLabeling(mustBeTrue, mustBeFalse)
