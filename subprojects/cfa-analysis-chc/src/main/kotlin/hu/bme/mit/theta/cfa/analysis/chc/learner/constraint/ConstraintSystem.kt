@@ -194,13 +194,12 @@ class ConstraintSystem private constructor(
         }
 
         private fun retraceDeductions(constraint: Constraint): List<Constraint> {
-            var question: Constraint? = constraint
-            val reasons = mutableListOf<Constraint>()
+            var question: Datapoint? = constraint.source
+            val reasons = mutableListOf<Constraint>(constraint)
             while (question != null) {
-                reasons.add(question)
-                question.source?.let { source ->
-                    question = forcedTrue[source] ?: error("Unreasoned deduction")
-                }
+                val reason: Constraint = forcedTrue[question] ?: error("Unreasoned deduction")
+                reasons.add(reason)
+                question = reason.source
             }
             reasons.reverse()
             return reasons
