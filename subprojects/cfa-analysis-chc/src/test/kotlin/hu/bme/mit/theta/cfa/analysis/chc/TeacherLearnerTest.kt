@@ -18,7 +18,7 @@ import org.junit.Test
 
 
 class TeacherLearnerTest {
-    var solver: Solver = Z3SolverFactory.getInstace().createSolver()
+    private var solver: Solver = Z3SolverFactory.getInstace().createSolver()
 
     @Before
     fun before() {

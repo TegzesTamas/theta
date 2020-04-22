@@ -225,7 +225,7 @@ class ConstraintSystem private constructor(
             require(trace.constraint.target == null)
             require(trace.constraint.source == null || (trace.usedSource != null && trace.usedSource.subsetOf(trace.constraint.source)))
             var usedSource: Datapoint? = trace.usedSource
-            val reasons = mutableListOf<Constraint>(trace.constraint)
+            val reasons = mutableListOf(trace.constraint)
             while (usedSource != null) {
                 val reason = positiveDeductions[usedSource] ?: error("Unreasoned deduction")
                 reasons.add(reason.constraint)
