@@ -22,7 +22,7 @@ class ConstraintSystemTest {
 
     private fun ConstraintSystem.assertExistentiallyTrue(dp: Datapoint) {
         assertTrue("Some datapoint must be existentially true, but was not found to be",
-                datapoints[dp]?.any { forcedTrue.containsKey(it) } ?: false)
+                forcedTrue.containsKey(dp)||datapoints[dp]?.any { forcedTrue.containsKey(it) } ?: false)
     }
 
     private fun ConstraintSystem.assertUniversallyFalse(dp: Datapoint) {

@@ -5,13 +5,13 @@ import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 
 class ConstraintSystem private constructor(
         val constraints: List<Constraint>,
-        val datapoints: Map<Datapoint, List<Datapoint>>,
+        val datapoints: Map<Datapoint, Set<Datapoint>>,
         val forcedTrue: Map<Datapoint, Constraint>,
         val forcedFalse: Set<Datapoint>
 ) {
     class Builder {
         private val constraints: MutableList<Constraint>
-        private val datapoints: MutableMap<Datapoint, MutableList<Datapoint>>
+        private val datapoints: MutableMap<Datapoint, MutableSet<Datapoint>>
 
 
         private val forcedTrue: MutableMap<Datapoint, Constraint>
@@ -26,14 +26,16 @@ class ConstraintSystem private constructor(
 
         constructor(c: ConstraintSystem) {
             constraints = c.constraints.toMutableList()
-            datapoints = c.datapoints.asSequence().map { it.key to it.value.toMutableList() }.toMap(mutableMapOf())
+            datapoints = c.datapoints.asSequence().map { it.key to it.value.toMutableSet() }.toMap(mutableMapOf())
             forcedTrue = c.forcedTrue.toMutableMap()
             forcedFalse = c.forcedFalse.toMutableSet()
         }
 
+        @Throws(ContradictoryException::class)
         fun addConstraint(constraint: Constraint): Builder {
             constraints.add(constraint)
             classifyNewDatapoints(listOf(constraint.source, constraint.target))
+            makePositiveDeductions()
             return this
         }
 
@@ -48,6 +50,7 @@ class ConstraintSystem private constructor(
                 if (!forcedTrue.containsKey(dp))
                     addConstraint(Constraint(null, dp, DummyCHC))
             }
+            makePositiveDeductions()
             return this
         }
 
@@ -62,13 +65,13 @@ class ConstraintSystem private constructor(
                 if (!forcedFalse.contains(dp))
                     addConstraint(Constraint(dp, null, DummyCHC))
             }
-
+            makePositiveDeductions()
+            makeNegativeDeductions()
             return this
         }
 
         @Throws(ContradictoryException::class)
         fun build(): ConstraintSystem {
-            makePositiveDeductions()
             makeNegativeDeductions()
             return ConstraintSystem(
                     constraints.toList(),
@@ -102,14 +105,17 @@ class ConstraintSystem private constructor(
                 var deducedSomething = false
                 for ((dp, cause) in deductions) {
                     if (!forcedTrue.containsKey(dp)) {
+                        if(!datapoints.containsKey(dp)){
+                            classifyNewDatapoints(listOf(dp))
+                        }
                         if (forcedFalse.contains(dp)) {
-                            throw ContradictoryException(emptyList(), "Datapoint forced both false and true: $dp")
+                            throw ContradictoryException(emptyList(), "Datapoint forced both false and true: $dp") //TODO maybe retrace deductions
                         }
                         deducedSomething = true
                         forcedTrue[dp] = cause
                         datapoints[dp]?.forEach { subset ->
                             if (forcedFalse.contains(subset)) {
-                                throw ContradictoryException(emptyList(), "Subset forced both false and true: $subset")
+                                throw ContradictoryException(emptyList(), "Subset forced both false and true: $subset") //TODO maybe retrace deductions
                             }
                             forcedTrue.putIfAbsent(subset, cause)
                         }
@@ -140,6 +146,9 @@ class ConstraintSystem private constructor(
                 var deducedSomething = false
                 for (deduction in deductions) {
                     if (!forcedFalse.contains(deduction)) {
+                        if(!datapoints.containsKey(deduction)){
+                            classifyNewDatapoints(listOf(deduction))
+                        }
                         if (forcedTrue.containsKey(deduction)) {
                             error("Negative deduction already forced true")
 //                            throw ContradictoryException(emptyList(), "Datapoint forced both true and false: $deduction")
@@ -164,7 +173,7 @@ class ConstraintSystem private constructor(
                 if (datapoints.containsKey(newDp)) {
                     return
                 }
-                val newList = mutableListOf<Datapoint>()
+                val newList = mutableSetOf<Datapoint>()
                 datapoints[newDp] = newList
                 for ((oldDp, oldList) in datapoints.entries) {
                     if (!newDp.disjoint(oldDp)) {
