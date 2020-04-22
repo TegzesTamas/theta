@@ -12,6 +12,7 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs.*
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Int
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Leq
 import hu.bme.mit.theta.core.utils.ExprUtils
+import hu.bme.mit.theta.core.utils.PathUtils
 import hu.bme.mit.theta.solver.utils.WithPushPop
 import hu.bme.mit.theta.solver.z3.Z3SolverFactory
 import org.junit.Assert.assertEquals
@@ -109,7 +110,7 @@ internal class DecisionTreeTest {
         assertEquals("Constraint 2 not honored.", False(), ExprUtils.simplify(invACandidate, dpFalse.valuation))
         val solver = Z3SolverFactory.getInstace().createSolver()
         WithPushPop(solver).use {
-            solver.add(And(invACandidate, dpSuperSet.valuation.toExpr(), Prime(Not(invBCandidate)), dpUnrelated.valuation.toExpr()))
+            solver.add(PathUtils.unfold(And(invACandidate, dpSuperSet.valuation.toExpr(), Prime(Not(invBCandidate)), dpUnrelated.valuation.toExpr()), 0))
             assertTrue("Constraint 3 not honored", solver.check().isUnsat)
         }
     }
