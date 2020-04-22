@@ -11,18 +11,18 @@ import org.junit.Test
 class ConstraintSystemTest {
 
     private fun ConstraintSystem.assertValid() {
-        assertTrue("Some datapoint forced also true and false", forcedTrue.keys.none { forcedFalse.contains(it) })
-        assertTrue("Some datapoint forced also true and false", forcedFalse.none { forcedTrue.containsKey(it) })
+        assertTrue("Some datapoint forced also true and false", forcedTrue.none { forcedFalse.contains(it) })
+        assertTrue("Some datapoint forced also true and false", forcedFalse.none { forcedTrue.contains(it) })
     }
 
     private fun ConstraintSystem.assertUniversallyTrue(dp: Datapoint) {
         assertTrue("Some datapoint must be universally true, but was not found to be",
-                forcedTrue.containsKey(dp))
+                forcedTrue.contains(dp))
     }
 
     private fun ConstraintSystem.assertExistentiallyTrue(dp: Datapoint) {
         assertTrue("Some datapoint must be existentially true, but was not found to be",
-                forcedTrue.containsKey(dp)||datapoints[dp]?.any { forcedTrue.containsKey(it) } ?: false)
+                forcedTrue.contains(dp)||subsets[dp]?.any { forcedTrue.contains(it) } ?: false)
     }
 
     private fun ConstraintSystem.assertUniversallyFalse(dp: Datapoint) {
@@ -32,7 +32,7 @@ class ConstraintSystemTest {
 
     private fun ConstraintSystem.assertExistentiallyFalse(dp: Datapoint) {
         assertTrue("Some datapoint must be existentially false, but was not found to be",
-                datapoints[dp]?.any { forcedFalse.contains(it) } ?: false)
+                subsets[dp]?.any { forcedFalse.contains(it) } ?: false)
     }
 
     @Test(expected = ContradictoryException::class)

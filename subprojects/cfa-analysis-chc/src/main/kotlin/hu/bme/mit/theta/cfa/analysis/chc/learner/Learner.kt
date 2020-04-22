@@ -25,7 +25,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
         data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)
 
-        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints.keys, null))
+        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints, null))
         val ready = mutableListOf<BuildNode>()
         while (toProcess.isNotEmpty()) {
             val (currDps, parentSlot) = toProcess.removeAt(0)
@@ -66,7 +66,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
     }
 
     private fun tryToLabel(datapoints: Set<Datapoint>): DecisionTree.Leaf? {
-        if (datapoints.all { constraintSystem.forcedTrue.containsKey(it) }) {
+        if (datapoints.all { constraintSystem.forcedTrue.contains(it) }) {
             return DecisionTree.Leaf(true)
         }
         if (datapoints.all { constraintSystem.forcedFalse.contains(it) }) {
@@ -78,7 +78,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 return DecisionTree.Leaf(true)
             }
         }
-        if (datapoints.none { constraintSystem.forcedTrue.containsKey(it) }) {
+        if (datapoints.none { constraintSystem.forcedTrue.contains(it) }) {
             constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
                 constraintSystem = it
                 return DecisionTree.Leaf(false)

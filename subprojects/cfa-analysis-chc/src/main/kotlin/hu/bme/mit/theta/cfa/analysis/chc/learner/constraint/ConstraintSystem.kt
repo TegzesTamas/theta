@@ -5,29 +5,34 @@ import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 
 class ConstraintSystem private constructor(
         val constraints: List<Constraint>,
-        val datapoints: Map<Datapoint, Set<Datapoint>>,
-        val forcedTrue: Map<Datapoint, Constraint>,
+        val subsets: Map<Datapoint, Set<Datapoint>>,
+        private val positiveDeductions: Map<Datapoint, DeductionTrace>,
         val forcedFalse: Set<Datapoint>
 ) {
+    val forcedTrue: Set<Datapoint>
+        get() = positiveDeductions.keys
+    val datapoints: Set<Datapoint>
+        get() = subsets.keys
+
+    private data class DeductionTrace(val constraint: Constraint, val usedSource: Datapoint?)
     class Builder {
         private val constraints: MutableList<Constraint>
-        private val datapoints: MutableMap<Datapoint, MutableSet<Datapoint>>
+        private val subsets: MutableMap<Datapoint, MutableSet<Datapoint>>
 
-
-        private val forcedTrue: MutableMap<Datapoint, Constraint>
+        private val positiveDeductions: MutableMap<Datapoint, DeductionTrace>
         private val forcedFalse: MutableSet<Datapoint>
 
         constructor() {
             constraints = mutableListOf()
-            datapoints = mutableMapOf()
-            forcedTrue = mutableMapOf()
+            subsets = mutableMapOf()
+            positiveDeductions = mutableMapOf()
             forcedFalse = mutableSetOf()
         }
 
         constructor(c: ConstraintSystem) {
             constraints = c.constraints.toMutableList()
-            datapoints = c.datapoints.asSequence().map { it.key to it.value.toMutableSet() }.toMap(mutableMapOf())
-            forcedTrue = c.forcedTrue.toMutableMap()
+            subsets = c.subsets.asSequence().map { it.key to it.value.toMutableSet() }.toMap(mutableMapOf())
+            positiveDeductions = c.positiveDeductions.toMutableMap()
             forcedFalse = c.forcedFalse.toMutableSet()
         }
 
@@ -41,13 +46,13 @@ class ConstraintSystem private constructor(
 
         @Throws(ContradictoryException::class)
         fun setDatapointsTrue(dps: Collection<Datapoint>): Builder {
-            require(datapoints.keys.containsAll(dps))
+            require(subsets.keys.containsAll(dps))
             if (dps.any { forcedFalse.contains(it) }) {
                 throw ContradictoryException(emptyList(), "Cannot set datapoint true, because it is already forced false")
             }
 
             for (dp in dps) {
-                if (!forcedTrue.containsKey(dp))
+                if (!subsets.containsKey(dp))
                     addConstraint(Constraint(null, dp, DummyCHC.unchanging))
             }
             makePositiveDeductions()
@@ -56,8 +61,8 @@ class ConstraintSystem private constructor(
 
         @Throws(ContradictoryException::class)
         fun setDatapointsFalse(dps: Collection<Datapoint>): Builder {
-            require(datapoints.keys.containsAll(dps))
-            if (dps.any { forcedTrue.containsKey(it) }) {
+            require(subsets.keys.containsAll(dps))
+            if (dps.any { positiveDeductions.containsKey(it) }) {
                 throw ContradictoryException(emptyList(), "Cannot set datapoint false because it is already forced true")
             }
 
@@ -75,8 +80,8 @@ class ConstraintSystem private constructor(
             makeNegativeDeductions()
             return ConstraintSystem(
                     constraints.toList(),
-                    datapoints.toMap(),
-                    forcedTrue.toMap(),
+                    subsets.toMap(),
+                    positiveDeductions.toMap(),
                     forcedFalse.toSet()
             )
         }
@@ -85,39 +90,39 @@ class ConstraintSystem private constructor(
         private fun makePositiveDeductions() {
             do {
                 val deductions = constraints.asSequence()
-                        .filter { !forcedTrue.containsKey(it.target) }
+                        .filter { !positiveDeductions.containsKey(it.target) }
                         .flatMap { constraint ->
-                            if (constraint.source == null || forcedTrue.containsKey(constraint.source)) {
+                            if (constraint.source == null || positiveDeductions.containsKey(constraint.source)) {
                                 sequenceOf(constraint.target
-                                        ?.let { target -> target to constraint }
-                                        ?: throw ContradictoryException(retraceDeductions(constraint)))
+                                        ?.let { target -> target to DeductionTrace(constraint, constraint.source) }
+                                        ?: throw ContradictoryException(retraceDeductions(DeductionTrace(constraint, constraint.source))))
                             } else {
-                                datapoints[constraint.source]?.asSequence()         //Subsets
-                                        ?.filter { forcedTrue.containsKey(it) }     //Forced true subsets
+                                subsets[constraint.source]?.asSequence()         //Subsets
+                                        ?.filter { positiveDeductions.containsKey(it) }     //Forced true subsets
                                         ?.map { subset ->                           //Target subset to constraint
                                             constraint.deducePositively(subset)
-                                                    ?.let { subsetTarget -> subsetTarget to constraint }
-                                                    ?: throw ContradictoryException(retraceDeductions(constraint))
+                                                    ?.let { subsetTarget -> subsetTarget to DeductionTrace(constraint, subset) }
+                                                    ?: throw ContradictoryException(retraceDeductions(DeductionTrace(constraint, subset)))
                                         }
                                         ?: emptySequence()
                             }
                         }
                 var deducedSomething = false
                 for ((dp, cause) in deductions) {
-                    if (!forcedTrue.containsKey(dp)) {
-                        if(!datapoints.containsKey(dp)){
+                    if (!positiveDeductions.containsKey(dp)) {
+                        if (!subsets.containsKey(dp)) {
                             classifyNewDatapoints(listOf(dp))
                         }
                         if (forcedFalse.contains(dp)) {
                             throw ContradictoryException(emptyList(), "Datapoint forced both false and true: $dp") //TODO maybe retrace deductions
                         }
                         deducedSomething = true
-                        forcedTrue[dp] = cause
-                        datapoints[dp]?.forEach { subset ->
+                        positiveDeductions[dp] = cause
+                        subsets[dp]?.forEach { subset ->
                             if (forcedFalse.contains(subset)) {
                                 throw ContradictoryException(emptyList(), "Subset forced both false and true: $subset") //TODO maybe retrace deductions
                             }
-                            forcedTrue.putIfAbsent(subset, cause)
+                            positiveDeductions.putIfAbsent(subset, cause)
                         }
                     }
                 }
@@ -134,7 +139,7 @@ class ConstraintSystem private constructor(
                                         ?: error("Negative deductions revealed contradiction")
                                 )
                             } else {
-                                datapoints[constraint.target]?.asSequence()     //Subsets
+                                subsets[constraint.target]?.asSequence()     //Subsets
                                         ?.filter { forcedFalse.contains(it) }   //Forced false subsets
                                         ?.map { subset ->
                                             constraint.deduceNegatively(subset)
@@ -146,20 +151,20 @@ class ConstraintSystem private constructor(
                 var deducedSomething = false
                 for (deduction in deductions) {
                     if (!forcedFalse.contains(deduction)) {
-                        if(!datapoints.containsKey(deduction)){
+                        if (!subsets.containsKey(deduction)) {
                             classifyNewDatapoints(listOf(deduction))
                         }
-                        if (forcedTrue.containsKey(deduction)) {
+                        if (positiveDeductions.containsKey(deduction)) {
                             error("Negative deduction already forced true")
 //                            throw ContradictoryException(emptyList(), "Datapoint forced both true and false: $deduction")
                         }
                         deducedSomething = true
                         forcedFalse.add(deduction)
-                        datapoints[deduction]?.firstOrNull { forcedTrue.containsKey(it) }?.let {
+                        subsets[deduction]?.firstOrNull { positiveDeductions.containsKey(it) }?.let {
                             error("Subset of negative deduction already forced true")
 //                            throw ContradictoryException(emptyList(), "Subset forced both true and false: $it")
                         }
-                        forcedFalse.addAll(datapoints[deduction] ?: emptyList())
+                        forcedFalse.addAll(subsets[deduction] ?: emptyList())
                     }
                 }
             } while (deducedSomething)
@@ -170,30 +175,29 @@ class ConstraintSystem private constructor(
             newDps.filterNotNullTo(toProcess)
             while (toProcess.isNotEmpty()) {
                 val newDp = toProcess.removeAt(0)
-                if (datapoints.containsKey(newDp)) {
-                    return
-                }
-                val newList = mutableSetOf<Datapoint>()
-                datapoints[newDp] = newList
-                for ((oldDp, oldList) in datapoints.entries) {
-                    if (!newDp.disjoint(oldDp)) {
-                        when {
-                            oldDp.subsetOf(newDp) -> {
-                                newList.add(oldDp)
-                                newList.addAll(oldList)
-                            }
-                            newDp.subsetOf(oldDp) -> {
-                                oldList.add(newDp)
-                                forcedTrue[oldDp]?.let {
-                                    forcedTrue[newDp] = it
+                if (!subsets.containsKey(newDp)) {
+                    val newList = mutableSetOf<Datapoint>()
+                    subsets[newDp] = newList
+                    for ((oldDp, oldList) in subsets.entries) {
+                        if (!newDp.disjoint(oldDp)) {
+                            when {
+                                oldDp.subsetOf(newDp) -> {
+                                    newList.add(oldDp)
+                                    newList.addAll(oldList)
                                 }
-                                if (forcedFalse.contains(oldDp)) {
-                                    forcedFalse.add(newDp)
+                                newDp.subsetOf(oldDp) -> {
+                                    oldList.add(newDp)
+                                    positiveDeductions[oldDp]?.let {
+                                        positiveDeductions[newDp] = it
+                                    }
+                                    if (forcedFalse.contains(oldDp)) {
+                                        forcedFalse.add(newDp)
+                                    }
                                 }
-                            }
-                            else -> {
-                                val commonSubset = intersection(newDp, oldDp)
-                                toProcess.add(commonSubset)
+                                else -> {
+                                    val commonSubset = intersection(newDp, oldDp)
+                                    toProcess.add(commonSubset)
+                                }
                             }
                         }
                     }
@@ -201,13 +205,15 @@ class ConstraintSystem private constructor(
             }
         }
 
-        private fun retraceDeductions(constraint: Constraint): List<Constraint> {
-            var question: Datapoint? = constraint.source
-            val reasons = mutableListOf<Constraint>(constraint)
-            while (question != null) {
-                val reason: Constraint = forcedTrue[question] ?: error("Unreasoned deduction")
-                reasons.add(reason)
-                question = reason.source
+        private fun retraceDeductions(trace: DeductionTrace): List<Constraint> {
+            require(trace.constraint.target == null)
+            require(trace.constraint.source == null || (trace.usedSource != null && trace.usedSource.subsetOf(trace.constraint.source)))
+            var usedSource: Datapoint? = trace.usedSource
+            val reasons = mutableListOf<Constraint>(trace.constraint)
+            while (usedSource != null) {
+                val reason = positiveDeductions[usedSource] ?: error("Unreasoned deduction")
+                reasons.add(reason.constraint)
+                usedSource = reason.usedSource
             }
             reasons.reverse()
             return reasons
@@ -215,7 +221,7 @@ class ConstraintSystem private constructor(
     }
 }
 
-fun ConstraintSystem.tryToSetDatapointsTrue(dps: Collection<Datapoint>): ConstraintSystem? {
+fun ConstraintSystem.tryToSetDatapointsTrue(dps: Collection<Datapoint>): ConstraintSystem? { //TODO handle newly created datapoints
     val builder = ConstraintSystem.Builder(this)
     return try {
         builder.setDatapointsTrue(dps)
@@ -225,7 +231,7 @@ fun ConstraintSystem.tryToSetDatapointsTrue(dps: Collection<Datapoint>): Constra
     }
 }
 
-fun ConstraintSystem.tryToSetDatapointsFalse(dps: Collection<Datapoint>): ConstraintSystem? {
+fun ConstraintSystem.tryToSetDatapointsFalse(dps: Collection<Datapoint>): ConstraintSystem? { //TODO handle newly created datapoints
     val builder = ConstraintSystem.Builder(this)
     return try {
         builder.setDatapointsFalse(dps)
