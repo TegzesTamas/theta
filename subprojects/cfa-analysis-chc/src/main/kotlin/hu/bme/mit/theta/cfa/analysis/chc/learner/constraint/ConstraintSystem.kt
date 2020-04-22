@@ -1,11 +1,12 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner.constraint
 
+import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 
 
 class ConstraintSystem private constructor(
         val constraints: List<Constraint>,
-        val subsets: Map<Datapoint, Set<Datapoint>>,
+        val subsets: Map<Datapoint, List<Datapoint>>,
         private val positiveDeductions: Map<Datapoint, DeductionTrace>,
         val forcedFalse: Set<Datapoint>
 ) {
@@ -16,8 +17,10 @@ class ConstraintSystem private constructor(
 
     private data class DeductionTrace(val constraint: Constraint, val usedSource: Datapoint?)
     class Builder {
+        private var newDatapoints: MutableSet<Datapoint> = mutableSetOf()
+
         private val constraints: MutableList<Constraint>
-        private val subsets: MutableMap<Datapoint, MutableSet<Datapoint>>
+        private val subsets: MutableMap<Datapoint, MutableList<Datapoint>>
 
         private val positiveDeductions: MutableMap<Datapoint, DeductionTrace>
         private val forcedFalse: MutableSet<Datapoint>
@@ -31,9 +34,15 @@ class ConstraintSystem private constructor(
 
         constructor(c: ConstraintSystem) {
             constraints = c.constraints.toMutableList()
-            subsets = c.subsets.asSequence().map { it.key to it.value.toMutableSet() }.toMap(mutableMapOf())
+            subsets = c.subsets.asSequence().map { it.key to it.value.toMutableList() }.toMap(mutableMapOf())
             positiveDeductions = c.positiveDeductions.toMutableMap()
             forcedFalse = c.forcedFalse.toMutableSet()
+        }
+
+        fun getAndResetNewDatapoints(): Set<Datapoint> {
+            val ret = newDatapoints
+            newDatapoints = mutableSetOf()
+            return ret
         }
 
         @Throws(ContradictoryException::class)
@@ -176,8 +185,8 @@ class ConstraintSystem private constructor(
             while (toProcess.isNotEmpty()) {
                 val newDp = toProcess.removeAt(0)
                 if (!subsets.containsKey(newDp)) {
-                    val newList = mutableSetOf<Datapoint>()
-                    subsets[newDp] = newList
+                    newDatapoints.add(newDp)
+                    val newList = mutableListOf<Datapoint>()
                     for ((oldDp, oldList) in subsets.entries) {
                         if (!newDp.disjoint(oldDp)) {
                             when {
@@ -200,6 +209,13 @@ class ConstraintSystem private constructor(
                                 }
                             }
                         }
+                        if (DEBUG) {
+                            assert(oldList.toSet().size == oldList.size)
+                        }
+                    }
+                    subsets[newDp] = newList
+                    if (DEBUG) {
+                        assert(newList.toSet().size == newList.size)
                     }
                 }
             }
@@ -218,26 +234,6 @@ class ConstraintSystem private constructor(
             reasons.reverse()
             return reasons
         }
-    }
-}
-
-fun ConstraintSystem.tryToSetDatapointsTrue(dps: Collection<Datapoint>): ConstraintSystem? { //TODO handle newly created datapoints
-    val builder = ConstraintSystem.Builder(this)
-    return try {
-        builder.setDatapointsTrue(dps)
-        builder.build()
-    } catch (e: ContradictoryException) {
-        null
-    }
-}
-
-fun ConstraintSystem.tryToSetDatapointsFalse(dps: Collection<Datapoint>): ConstraintSystem? { //TODO handle newly created datapoints
-    val builder = ConstraintSystem.Builder(this)
-    return try {
-        builder.setDatapointsFalse(dps)
-        builder.build()
-    } catch (e: ContradictoryException) {
-        null
     }
 }
 
