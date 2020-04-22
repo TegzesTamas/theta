@@ -2,9 +2,8 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsFalse
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.tryToSetDatapointsTrue
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.Decision
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.DecisionTree
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ExprDecision
@@ -16,72 +15,105 @@ import hu.bme.mit.theta.core.type.inttype.IntExprs.Eq
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Leq
 import hu.bme.mit.theta.core.type.inttype.IntLitExpr
 import hu.bme.mit.theta.core.type.inttype.IntType
+import java.util.*
 import kotlin.math.min
 
 class Learner(private var constraintSystem: ConstraintSystem) {
 
+    private lateinit var root: BuildNode
+
     fun buildTree(): DecisionTree {
+        val toProcess = LinkedList(Collections.singleton(SetToProcess(constraintSystem.datapoints.toMutableSet(), mutableSetOf(), null)))
+        do {
+            val (wholeDatapoints, splitDatapoints, parentSlot) = toProcess.removeFirst()
 
-        data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
-        data class SetToProcess(val datapoints: Set<Datapoint>, val slot: ParentSlot?)
-
-        val toProcess = mutableListOf(SetToProcess(constraintSystem.datapoints, null))
-        val ready = mutableListOf<BuildNode>()
-        while (toProcess.isNotEmpty()) {
-            val (currDps, parentSlot) = toProcess.removeAt(0)
-
-            val leaf = tryToLabel(currDps)
+            val leaf = tryToLabel(wholeDatapoints, splitDatapoints)
 
             val node: BuildNode
             if (leaf != null) {
                 node = LeafBuildNode(leaf)
             } else {
-                val decision = findSplittingDecision(currDps)
-                val ifTrue: Set<Datapoint> = currDps
+                val decision = findSplittingDecision(wholeDatapoints + splitDatapoints)
+                val trueSideWhole = wholeDatapoints
+                        .filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) && !decision.datapointCanBeFalse(it) }
+                val falseSideWhole = wholeDatapoints
+                        .filterTo(mutableSetOf()) { !decision.datapointCanBeTrue(it) && decision.datapointCanBeFalse(it) }
+                val bothSides: Set<Datapoint> = wholeDatapoints
+                        .filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) && decision.datapointCanBeFalse(it) }
+                val trueSideSplit = splitDatapoints
                         .filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) }
-                val ifFalse = currDps
+                        .apply { addAll(bothSides) }
+                val falseSideSplit = splitDatapoints
                         .filterTo(mutableSetOf()) { decision.datapointCanBeFalse(it) }
-                node = BranchBuildNode(decision)
+                        .apply { addAll(bothSides) }
+
+                val trueProcess = SetToProcess(trueSideWhole, trueSideSplit, null)
+                val falseProcess = SetToProcess(falseSideWhole, falseSideSplit, null)
+
+                node = BranchBuildNode(decision, trueProcess, falseProcess)
+                trueProcess.parentSlot = SetToProcess.ParentSlot(node, true)
+                falseProcess.parentSlot = SetToProcess.ParentSlot(node, false)
                 if (DEBUG) {
-                    if (ifTrue == currDps || ifFalse == currDps) {
+                    if ((trueSideSplit == splitDatapoints && trueSideWhole == wholeDatapoints) || (falseSideSplit == splitDatapoints && falseSideWhole == wholeDatapoints)) {
                         error("Tried to split datapoints, but one of the new nodes have the same datapoints as before")
                     }
                 }
-                toProcess += SetToProcess(ifTrue, ParentSlot(node, true))
-                toProcess += SetToProcess(ifFalse, ParentSlot(node, false))
+                toProcess += trueProcess
+                toProcess += falseProcess
             }
-            ready += node
-            parentSlot?.let { (parent, side) ->
-                if (side) {
-                    parent.trueChild = node
-                } else {
-                    parent.falseChild = node
+            if (parentSlot == null) {
+                root = node
+            } else {
+                val (parent, side) = parentSlot
+                when (side) {
+                    true -> parent.trueChild = node
+                    false -> parent.falseChild = node
                 }
             }
-        }
-        for (i in ready.lastIndex downTo 0) {
-            ready[i].build()
-        }
-        return DecisionTree(ready[0].built!!)
+        } while (toProcess.isNotEmpty())
+        return DecisionTree(root.built!!)
     }
 
-    private fun tryToLabel(datapoints: Set<Datapoint>): DecisionTree.Leaf? {
-        if (datapoints.all { constraintSystem.forcedTrue.contains(it) }) {
+    private fun tryToLabel(wholeDatapoints: Set<Datapoint>, splitDatapoints: Set<Datapoint>): DecisionTree.Leaf? {
+        if (wholeDatapoints.all { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.all { constraintSystem.forcedTrue.contains(it) }) {
             return DecisionTree.Leaf(true)
         }
-        if (datapoints.all { constraintSystem.forcedFalse.contains(it) }) {
+        if (wholeDatapoints.all { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.all { constraintSystem.forcedFalse.contains(it) }) {
             return DecisionTree.Leaf(false)
         }
-        if (datapoints.none { constraintSystem.forcedFalse.contains(it) }) {
-            constraintSystem.tryToSetDatapointsTrue(datapoints)?.let {
-                constraintSystem = it
-                return DecisionTree.Leaf(true)
+
+        fun tryToLabel(label: Boolean): DecisionTree.Leaf? {
+            val builder = ConstraintSystem.Builder(constraintSystem)
+            try {
+                when (label) {
+                    true -> builder.setDatapointsTrue(wholeDatapoints)
+                    false -> builder.setDatapointsFalse(wholeDatapoints)
+
+                }
+                do {
+                    val newDatapoints = builder.getAndResetNewDatapoints()
+                    for (newDp in newDatapoints) {
+                        when (root.classifyNewDatapoint(newDp, false)) {
+                            true -> builder.setDatapointsTrue(listOf(newDp))
+                            false -> builder.setDatapointsFalse(listOf(newDp))
+                        }
+                    }
+                } while (newDatapoints.isNotEmpty())
+                constraintSystem = builder.build()
+                return DecisionTree.Leaf(label)
+            } catch (e: ContradictoryException) {
+                return null
             }
         }
-        if (datapoints.none { constraintSystem.forcedTrue.contains(it) }) {
-            constraintSystem.tryToSetDatapointsFalse(datapoints)?.let {
-                constraintSystem = it
-                return DecisionTree.Leaf(false)
+
+        if (wholeDatapoints.none { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.none { constraintSystem.forcedFalse.contains(it) }) {
+            tryToLabel(true)?.let {
+                return it
+            }
+        }
+        if (wholeDatapoints.none { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.none { constraintSystem.forcedTrue.contains(it) }) {
+            tryToLabel(false)?.let {
+                return it
             }
         }
         return null
@@ -216,25 +248,51 @@ class Learner(private var constraintSystem: ConstraintSystem) {
 
     private fun classificationError(mustBeTrue: Int, mustBeFalse: Int, total: Int): Double = min(mustBeTrue, mustBeFalse) + (total - mustBeTrue - mustBeFalse) / 2.0
 
-    private abstract class BuildNode {
-        abstract val built: DecisionTree.Node?
-        abstract fun build()
+    private interface BuildNode {
+        val built: DecisionTree.Node?
+        fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean?
     }
 
-    private data class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode? = null, var falseChild: BuildNode? = null) : BuildNode() {
-        override var built: DecisionTree.Branch? = null
-            private set
+    private data class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) : BuildNode {
+        override val built: DecisionTree.Branch?
+            get() {
+                return DecisionTree.Branch(pivot, trueChild.built ?: return null, falseChild.built ?: return null)
+            }
 
-        override fun build() {
-            trueChild?.built?.let { ifTrue ->
-                falseChild?.built?.let { ifFalse ->
-                    built = DecisionTree.Branch(pivot, ifTrue, ifFalse)
+        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? {
+            val datapointCanBeTrue = pivot.datapointCanBeTrue(datapoint)
+            val datapointCanBeFalse = pivot.datapointCanBeFalse(datapoint)
+            return when {
+                datapointCanBeTrue && datapointCanBeFalse -> {
+                    trueChild.classifyNewDatapoint(datapoint, true)
+                    falseChild.classifyNewDatapoint(datapoint, true)
+                    null
                 }
-            } ?: kotlin.run { built = null }
+                datapointCanBeTrue -> trueChild.classifyNewDatapoint(datapoint, wasSplit)
+                datapointCanBeFalse -> falseChild.classifyNewDatapoint(datapoint, wasSplit)
+                else -> error("Datapoint not true, nor false")
+            }
         }
     }
 
-    private data class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode() {
-        override fun build() {}
+    private data class SetToProcess(val wholeDatapoints: MutableSet<Datapoint>, val splitDatapoints: MutableSet<Datapoint>, var parentSlot: ParentSlot?) : BuildNode {
+        data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
+
+        override val built: DecisionTree.Node?
+            get() = null
+
+        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? {
+            if (wasSplit) {
+                splitDatapoints.add(datapoint)
+            } else {
+                wholeDatapoints.add(datapoint)
+            }
+            return null
+        }
+    }
+
+
+    private data class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode {
+        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? = built.label
     }
 }
