@@ -7,12 +7,15 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.model.MutableValuation
-import hu.bme.mit.theta.core.type.booltype.BoolExprs.False
-import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
+import hu.bme.mit.theta.core.type.anytype.Exprs.Prime
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.*
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Int
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Leq
 import hu.bme.mit.theta.core.utils.ExprUtils
-import org.junit.Assert
+import hu.bme.mit.theta.solver.utils.WithPushPop
+import hu.bme.mit.theta.solver.z3.Z3SolverFactory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 
@@ -40,12 +43,12 @@ internal class DecisionTreeTest {
 
         val tree = Learner(constraintsSystem).buildTree()
         val expr = tree.candidates[invariant]
-        Assert.assertEquals(True(), ExprUtils.simplify(expr, valuationA))
-        Assert.assertEquals(False(), ExprUtils.simplify(expr, valuationB))
-        Assert.assertEquals(1, expr.arity)
+        assertEquals(True(), ExprUtils.simplify(expr, valuationA))
+        assertEquals(False(), ExprUtils.simplify(expr, valuationB))
+        assertEquals(1, expr.arity)
         val notConstantOps = expr.ops.first().ops.filter { it != True() }
-        Assert.assertEquals(1, notConstantOps.size)
-        Assert.assertEquals(Leq(x.ref, Int(12)), notConstantOps.first())
+        assertEquals(1, notConstantOps.size)
+        assertEquals(Leq(x.ref, Int(12)), notConstantOps.first())
     }
 
 
@@ -73,10 +76,41 @@ internal class DecisionTreeTest {
         val tree = Learner(constraintSystem).buildTree()
         val exprA = tree.candidates[invariantA]
         val exprB = tree.candidates[invariantB]
-        Assert.assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
-        Assert.assertEquals(1, exprA.arity)
-        Assert.assertEquals(0, exprB.arity)
+        assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
+        assertEquals(1, exprA.arity)
+        assertEquals(0, exprB.arity)
         val notConstantOps = exprA.ops.first().ops.filter { it != True() }
-        Assert.assertEquals(0, notConstantOps.size)
+        assertEquals(0, notConstantOps.size)
+    }
+
+    @Test
+    fun subsetsWithDifferentLabelsTest() {
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        val invA = Invariant("invA")
+        val invB = Invariant("invB")
+
+        val dpTrue = Datapoint(invA, MutableValuation().apply { put(x, Int(1)); put(y, Int(1)) })
+        val dpFalse = Datapoint(invA, MutableValuation().apply { put(x, Int(1)); put(y, Int(2)) })
+        val dpSuperSet = Datapoint(invA, MutableValuation().apply { put(x, Int(1)) })
+        val dpUnrelated = Datapoint(invB, MutableValuation().apply { put(x, Int(12)); put(y, Int(300)) })
+
+        val constraintSystem = ConstraintSystem.Builder()
+                .addConstraint(Constraint(null, dpTrue, DummyCHC.unchanging))
+                .addConstraint(Constraint(dpFalse, null, DummyCHC.unchanging))
+                .addConstraint(Constraint(dpSuperSet, dpUnrelated, DummyCHC(x, y)))
+                .build()
+
+        val tree = Learner(constraintSystem).buildTree()
+        val candidates = tree.candidates
+        val invACandidate = candidates[invA]
+        val invBCandidate = candidates[invB]
+        assertEquals("Constraint 1 not honored.", True(), ExprUtils.simplify(invACandidate, dpTrue.valuation))
+        assertEquals("Constraint 2 not honored.", False(), ExprUtils.simplify(invACandidate, dpFalse.valuation))
+        val solver = Z3SolverFactory.getInstace().createSolver()
+        WithPushPop(solver).use {
+            solver.add(And(invACandidate, dpSuperSet.valuation.toExpr(), Prime(Not(invBCandidate)), dpUnrelated.valuation.toExpr()))
+            assertTrue("Constraint 3 not honored", solver.check().isUnsat)
+        }
     }
 }
