@@ -33,8 +33,7 @@ class ConstraintSystem private constructor(
 
         fun addConstraint(constraint: Constraint): Builder {
             constraints.add(constraint)
-            classifyNewDatapoint(listOf(constraint.source))
-            classifyNewDatapoint(listOf(constraint.target))
+            classifyNewDatapoints(listOf(constraint.source, constraint.target))
             return this
         }
 
@@ -157,7 +156,7 @@ class ConstraintSystem private constructor(
             } while (deducedSomething)
         }
 
-        private fun classifyNewDatapoint(newDps: List<Datapoint?>) {
+        private fun classifyNewDatapoints(newDps: List<Datapoint?>) {
             val toProcess = mutableListOf<Datapoint>()
             newDps.filterNotNullTo(toProcess)
             while (toProcess.isNotEmpty()) {
