@@ -179,9 +179,8 @@ data class SimpleCHC(override val body: AndExpr,
 }
 
 
-
-class DummyCHC(vararg changedVariables : VarDecl<*>) : CHC {
-    companion object{
+class DummyCHC(vararg changedVariables: VarDecl<*>) : CHC {
+    companion object {
         val unchanging = DummyCHC()
     }
 

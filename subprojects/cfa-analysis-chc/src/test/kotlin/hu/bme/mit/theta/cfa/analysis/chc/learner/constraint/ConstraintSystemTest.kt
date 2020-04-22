@@ -22,7 +22,7 @@ class ConstraintSystemTest {
 
     private fun ConstraintSystem.assertExistentiallyTrue(dp: Datapoint) {
         assertTrue("Some datapoint must be existentially true, but was not found to be",
-                forcedTrue.contains(dp)||subsets[dp]?.any { forcedTrue.contains(it) } ?: false)
+                forcedTrue.contains(dp) || subsets[dp]?.any { forcedTrue.contains(it) } ?: false)
     }
 
     private fun ConstraintSystem.assertUniversallyFalse(dp: Datapoint) {
@@ -131,7 +131,7 @@ class ConstraintSystemTest {
 
         ConstraintSystem.Builder()
                 .addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
-                .addConstraint(Constraint(dpB, dpC, DummyCHC(x,y,z)))
+                .addConstraint(Constraint(dpB, dpC, DummyCHC(x, y, z)))
                 .addConstraint(Constraint(dpD, null, DummyCHC.unchanging))
                 .build()
     }
