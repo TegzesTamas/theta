@@ -2,6 +2,7 @@ package hu.bme.mit.theta.cfa.analysis.chc
 
 import com.google.common.collect.Iterables
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.AndExpr
@@ -177,13 +178,26 @@ data class SimpleCHC(override val body: AndExpr,
     override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> = null to null
 }
 
-object DummyCHC : CHC {
+
+
+class DummyCHC(vararg changedVariables : VarDecl<*>) : CHC {
+    companion object{
+        val unchanging = DummyCHC()
+    }
+
     override val body: AndExpr
         get() = BoolExprs.And(listOf(BoolExprs.True()))
     override val postIndexing: VarIndexing
-        get() = VarIndexing.all(0)
     override val invariantsToFind: Set<Invariant>
         get() = emptySet()
+
+    init {
+        val builder = VarIndexing.builder(0)
+        for (changedVariable in changedVariables) {
+            builder.inc(changedVariable)
+        }
+        postIndexing = builder.build()
+    }
 
     override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> = BoolExprs.True()
 

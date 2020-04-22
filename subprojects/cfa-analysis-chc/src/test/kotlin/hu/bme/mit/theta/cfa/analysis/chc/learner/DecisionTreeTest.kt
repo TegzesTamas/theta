@@ -34,8 +34,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariant, valuationB)
 
         val constraintsSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA, DummyCHC))
-                .addConstraint(Constraint(dpB, null, DummyCHC))
+                .addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+                .addConstraint(Constraint(dpB, null, DummyCHC.unchanging))
                 .build()
 
         val tree = Learner(constraintsSystem).buildTree()
@@ -66,8 +66,8 @@ internal class DecisionTreeTest {
         val dpB = Datapoint(invariantB, valuationB)
 
         val constraintSystem = ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA, DummyCHC))
-                .addConstraint(Constraint(dpB, null, DummyCHC))
+                .addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+                .addConstraint(Constraint(dpB, null, DummyCHC.unchanging))
                 .build()
 
         val tree = Learner(constraintSystem).buildTree()

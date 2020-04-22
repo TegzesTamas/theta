@@ -48,7 +48,7 @@ class ConstraintSystem private constructor(
 
             for (dp in dps) {
                 if (!forcedTrue.containsKey(dp))
-                    addConstraint(Constraint(null, dp, DummyCHC))
+                    addConstraint(Constraint(null, dp, DummyCHC.unchanging))
             }
             makePositiveDeductions()
             return this
@@ -63,7 +63,7 @@ class ConstraintSystem private constructor(
 
             for (dp in dps) {
                 if (!forcedFalse.contains(dp))
-                    addConstraint(Constraint(dp, null, DummyCHC))
+                    addConstraint(Constraint(dp, null, DummyCHC.unchanging))
             }
             makePositiveDeductions()
             makeNegativeDeductions()

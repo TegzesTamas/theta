@@ -39,8 +39,8 @@ class ConstraintSystemTest {
     fun contradictoryBySimpleDeductionTest() {
         val dpA = Datapoint(Invariant("A"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(null, dpA, DummyCHC))
-        builder.addConstraint(Constraint(dpA, null, DummyCHC))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(dpA, null, DummyCHC.unchanging))
         builder.build()
     }
 
@@ -50,9 +50,9 @@ class ConstraintSystemTest {
         val dpB = Datapoint(Invariant("B"), MutableValuation())
         val dpC = Datapoint(Invariant("C"), MutableValuation())
         val builder = ConstraintSystem.Builder()
-        builder.addConstraint(Constraint(null, dpA, DummyCHC))
-        builder.addConstraint(Constraint(null, dpB, DummyCHC))
-        builder.addConstraint(Constraint(dpC, null, DummyCHC))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(null, dpB, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(dpC, null, DummyCHC.unchanging))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -69,8 +69,8 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(null, dpA, DummyCHC))
-        builder.addConstraint(Constraint(dpB, null, DummyCHC))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(dpB, null, DummyCHC.unchanging))
         builder.build()
     }
 
@@ -85,9 +85,9 @@ class ConstraintSystemTest {
 
         val builder = ConstraintSystem.Builder()
 
-        builder.addConstraint(Constraint(null, dpA, DummyCHC))
-        builder.addConstraint(Constraint(dpB, dpC, DummyCHC))
-        builder.addConstraint(Constraint(dpD, null, DummyCHC))
+        builder.addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(dpB, dpC, DummyCHC.unchanging))
+        builder.addConstraint(Constraint(dpD, null, DummyCHC.unchanging))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
         constraintSystem.assertUniversallyTrue(dpA)
@@ -130,9 +130,9 @@ class ConstraintSystemTest {
         val dpD = Datapoint(inv, valD)
 
         ConstraintSystem.Builder()
-                .addConstraint(Constraint(null, dpA, DummyCHC))
-                .addConstraint(Constraint(dpB, dpC, DummyCHC))
-                .addConstraint(Constraint(dpD, null, DummyCHC))
+                .addConstraint(Constraint(null, dpA, DummyCHC.unchanging))
+                .addConstraint(Constraint(dpB, dpC, DummyCHC(x,y,z)))
+                .addConstraint(Constraint(dpD, null, DummyCHC.unchanging))
                 .build()
     }
 
