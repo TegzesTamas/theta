@@ -6,7 +6,6 @@ import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 class ConstraintSystem private constructor(
         val constraints: List<Constraint>,
         val datapoints: Map<Datapoint, List<Datapoint>>,
-        var ambiguousDatapoints: Set<Datapoint>,
         val forcedTrue: Map<Datapoint, Constraint>,
         val forcedFalse: Set<Datapoint>
 ) {
@@ -14,7 +13,6 @@ class ConstraintSystem private constructor(
         private val constraints: MutableList<Constraint>
         private val datapoints: MutableMap<Datapoint, MutableList<Datapoint>>
 
-        private var ambiguousDatapoints: MutableSet<Datapoint>
 
         private val forcedTrue: MutableMap<Datapoint, Constraint>
         private val forcedFalse: MutableSet<Datapoint>
@@ -22,7 +20,6 @@ class ConstraintSystem private constructor(
         constructor() {
             constraints = mutableListOf()
             datapoints = mutableMapOf()
-            ambiguousDatapoints = mutableSetOf()
             forcedTrue = mutableMapOf()
             forcedFalse = mutableSetOf()
         }
@@ -30,7 +27,6 @@ class ConstraintSystem private constructor(
         constructor(c: ConstraintSystem) {
             constraints = c.constraints.toMutableList()
             datapoints = c.datapoints.asSequence().map { it.key to it.value.toMutableList() }.toMap(mutableMapOf())
-            ambiguousDatapoints = c.ambiguousDatapoints.toMutableSet()
             forcedTrue = c.forcedTrue.toMutableMap()
             forcedFalse = c.forcedFalse.toMutableSet()
         }
@@ -78,7 +74,6 @@ class ConstraintSystem private constructor(
             return ConstraintSystem(
                     constraints.toList(),
                     datapoints.toMap(),
-                    ambiguousDatapoints.toSet(),
                     forcedTrue.toMap(),
                     forcedFalse.toSet()
             )
