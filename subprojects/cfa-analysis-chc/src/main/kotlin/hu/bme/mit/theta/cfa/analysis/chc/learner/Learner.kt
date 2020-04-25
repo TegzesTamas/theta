@@ -82,41 +82,50 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             return DecisionTree.Leaf(false)
         }
 
-        fun tryToLabel(label: Boolean): DecisionTree.Leaf? {
-            val builder = ConstraintSystem.Builder(constraintSystem)
-            try {
-                when (label) {
-                    true -> builder.setDatapointsTrue(wholeDatapoints)
-                    false -> builder.setDatapointsFalse(wholeDatapoints)
-
-                }
-                do {
-                    val newDatapoints = builder.getAndResetNewDatapoints()
-                    for (newDp in newDatapoints) {
-                        when (root.classifyNewDatapoint(newDp, false)) {
-                            true -> builder.setDatapointsTrue(listOf(newDp))
-                            false -> builder.setDatapointsFalse(listOf(newDp))
-                        }
-                    }
-                } while (newDatapoints.isNotEmpty())
-                constraintSystem = builder.build()
-                return DecisionTree.Leaf(label)
-            } catch (e: ContradictoryException) {
-                return null
-            }
-        }
-
         if (wholeDatapoints.none { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.none { constraintSystem.forcedFalse.contains(it) }) {
-            tryToLabel(true)?.let {
+            tryToExecuteLabeling(wholeDatapoints,true)?.let {
                 return it
             }
         }
         if (wholeDatapoints.none { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.none { constraintSystem.forcedTrue.contains(it) }) {
-            tryToLabel(false)?.let {
+            tryToExecuteLabeling(wholeDatapoints,false)?.let {
                 return it
             }
         }
         return null
+    }
+
+    private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, label : Boolean) : DecisionTree.Leaf?{
+        val allNewDatapoints = mutableListOf<Pair<Datapoint, Boolean?>>()
+        try {
+            val builder = ConstraintSystem.Builder(constraintSystem)
+            when (label) {
+                true -> builder.labelDatapointsTrue(wholeDatapoints)
+                false -> builder.labelDatapointsFalse(wholeDatapoints)
+
+            }
+            do {
+                val newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
+                builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
+                builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
+                allNewDatapoints.addAll(newDatapoints)
+            } while (newDatapoints.isNotEmpty())
+            assert(allNewDatapoints.toSet().size == allNewDatapoints.size)
+            constraintSystem = builder.build()
+            return DecisionTree.Leaf(label)
+        } catch (e: ContradictoryException) {
+            val builder = ConstraintSystem.Builder(constraintSystem)
+            builder.addDatapoints(allNewDatapoints.map { it.first })
+            builder.getAndResetNewDatapoints()
+            var newDatapoints: List<Pair<Datapoint, Boolean?>> = allNewDatapoints
+            while (newDatapoints.isNotEmpty()){
+                builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
+                builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
+                newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
+            }
+            return null
+        }
+
     }
 
 
@@ -264,13 +273,17 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             val datapointCanBeFalse = pivot.datapointCanBeFalse(datapoint)
             return when {
                 datapointCanBeTrue && datapointCanBeFalse -> {
-                    trueChild.classifyNewDatapoint(datapoint, true)
-                    falseChild.classifyNewDatapoint(datapoint, true)
-                    null
+                    val aLabel = trueChild.classifyNewDatapoint(datapoint, true)
+                    val bLabel = falseChild.classifyNewDatapoint(datapoint, true)
+                    if(aLabel == bLabel){
+                        aLabel
+                    } else {
+                        null
+                    }
                 }
                 datapointCanBeTrue -> trueChild.classifyNewDatapoint(datapoint, wasSplit)
                 datapointCanBeFalse -> falseChild.classifyNewDatapoint(datapoint, wasSplit)
-                else -> error("Datapoint not true, nor false")
+                else -> error("Datapoint neither true, nor false")
             }
         }
     }
