@@ -18,9 +18,7 @@ fun Constraint.deducePositively(forcedTrue: Datapoint): Datapoint? {
     if (source == null) {
         return target
     }
-    if (source.disjoint(forcedTrue)) {
-        error("Cannot deduce from a disjoint datapoint")
-    }
+    require(!source.disjoint(forcedTrue)) { "Cannot deduce from a disjoint datapoint" }
     if (target == null) {
         return null
     }
@@ -31,16 +29,14 @@ fun Constraint.deducePositively(forcedTrue: Datapoint): Datapoint? {
             deducedValuation.put(decl, value)
         }
     }
-    return Datapoint(target.invariant, intersection(target.valuation, deducedValuation))
+    return Datapoint(target.invariant, intersection(deducedValuation, target.valuation))
 }
 
 fun Constraint.deduceNegatively(forcedFalse: Datapoint): Datapoint? {
     if (target == null) {
         return source
     }
-    if (target.disjoint(forcedFalse)) {
-        error("Cannot deduce from a disjoint datapoint")
-    }
+    require(!target.disjoint(forcedFalse)) { "Cannot deduce from a disjoint datapoint" }
     if (source == null) {
         return null
     }
@@ -51,7 +47,7 @@ fun Constraint.deduceNegatively(forcedFalse: Datapoint): Datapoint? {
             deducedValuation.put(decl, value)
         }
     }
-    return Datapoint(source.invariant, intersection(source.valuation, deducedValuation))
+    return Datapoint(source.invariant, intersection(deducedValuation, source.valuation))
 }
 
 
@@ -74,12 +70,16 @@ fun Valuation.disjoint(other: Valuation): Boolean {
     }
 }
 
-fun intersection(a: Datapoint, b: Datapoint): Datapoint = Datapoint(a.invariant, intersection(a.valuation, b.valuation))
+fun intersection(a: Datapoint, b: Datapoint): Datapoint {
+    require(a.invariant == b.invariant)
+    return Datapoint(b.invariant, intersection(a.valuation, b.valuation))
+}
 
 /**
  * Given two inseparable valuations, it returns a valuation that subsumes both of them.
  * The returned valuation assigns value to all of the variables that either of the valuation assigns value to, and the
  * value assigned to them is the one assigned by b, or if b does not assign a value, then the value assigned by a.
+ * Requires the two valuations to be disjoint.
  */
 private fun intersection(a: Valuation, b: Valuation): Valuation {
     val aMap = a.toMap()
@@ -89,6 +89,9 @@ private fun intersection(a: Valuation, b: Valuation): Valuation {
         mutableValuation.put(key, value)
     }
     for ((key, value) in bMap.entries) {
+        if (aMap[key]?.let { it != value } == true) {
+            error("Valuations not disjoint.")
+        }
         mutableValuation.put(key, value)
     }
     return mutableValuation
