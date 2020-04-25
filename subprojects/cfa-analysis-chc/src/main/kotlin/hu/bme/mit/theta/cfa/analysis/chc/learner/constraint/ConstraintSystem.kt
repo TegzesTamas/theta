@@ -61,7 +61,7 @@ class ConstraintSystem private constructor(
             }
 
             for (dp in dps) {
-                if (!subsets.containsKey(dp))
+                if (!positiveDeductions.containsKey(dp))
                     addConstraint(Constraint(null, dp, DummyCHC.unchanging))
             }
             makeDeductions()
