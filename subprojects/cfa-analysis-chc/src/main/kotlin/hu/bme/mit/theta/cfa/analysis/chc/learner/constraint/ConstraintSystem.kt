@@ -49,50 +49,59 @@ class ConstraintSystem private constructor(
         fun addConstraint(constraint: Constraint): Builder {
             constraints.add(constraint)
             classifyNewDatapoints(listOf(constraint.source, constraint.target))
-            makePositiveDeductions()
+            makeDeductions()
             return this
         }
 
         @Throws(ContradictoryException::class)
-        fun setDatapointsTrue(dps: Collection<Datapoint>): Builder {
+        fun labelDatapointsTrue(dps: Collection<Datapoint>): Builder {
             require(subsets.keys.containsAll(dps))
             if (dps.any { forcedFalse.contains(it) }) {
-                throw ContradictoryException(emptyList(), "Cannot set datapoint true, because it is already forced false")
+                throw ContradictoryException(emptyList(), "Cannot label datapoint true, because it is already forced false")
             }
 
             for (dp in dps) {
                 if (!subsets.containsKey(dp))
                     addConstraint(Constraint(null, dp, DummyCHC.unchanging))
             }
-            makePositiveDeductions()
+            makeDeductions()
             return this
         }
 
         @Throws(ContradictoryException::class)
-        fun setDatapointsFalse(dps: Collection<Datapoint>): Builder {
+        fun labelDatapointsFalse(dps: Collection<Datapoint>): Builder {
             require(subsets.keys.containsAll(dps))
             if (dps.any { positiveDeductions.containsKey(it) }) {
-                throw ContradictoryException(emptyList(), "Cannot set datapoint false because it is already forced true")
+                throw ContradictoryException(emptyList(), "Cannot label datapoint false because it is already forced true")
             }
 
             for (dp in dps) {
                 if (!forcedFalse.contains(dp))
                     addConstraint(Constraint(dp, null, DummyCHC.unchanging))
             }
-            makePositiveDeductions()
-            makeNegativeDeductions()
+            makeDeductions()
+            return this
+        }
+
+        fun addDatapoints(datapoints : Iterable<Datapoint>) : Builder{
+            classifyNewDatapoints(datapoints)
             return this
         }
 
         @Throws(ContradictoryException::class)
         fun build(): ConstraintSystem {
-            makeNegativeDeductions()
+            makeDeductions()
             return ConstraintSystem(
                     constraints.toList(),
                     subsets.toMap(),
                     positiveDeductions.toMap(),
                     forcedFalse.toSet()
             )
+        }
+
+        private fun makeDeductions() {
+            makePositiveDeductions()
+            makeNegativeDeductions()
         }
 
         @Throws(ContradictoryException::class)
@@ -106,32 +115,31 @@ class ConstraintSystem private constructor(
                                         ?.let { target -> target to DeductionTrace(constraint, constraint.source) }
                                         ?: throw ContradictoryException(retraceDeductions(DeductionTrace(constraint, constraint.source))))
                             } else {
-                                subsets[constraint.source]?.asSequence()         //Subsets
-                                        ?.filter { positiveDeductions.containsKey(it) }     //Forced true subsets
-                                        ?.map { subset ->                           //Target subset to constraint
+                                subsets[constraint.source]!!.asSequence()         //Subsets
+                                        .filter { subset -> positiveDeductions.containsKey(subset) }     //Forced true subsets
+                                        .map { subset ->                           //Target subset to constraint
                                             constraint.deducePositively(subset)
                                                     ?.let { subsetTarget -> subsetTarget to DeductionTrace(constraint, subset) }
                                                     ?: throw ContradictoryException(retraceDeductions(DeductionTrace(constraint, subset)))
                                         }
-                                        ?: emptySequence()
                             }
                         }
                 var deducedSomething = false
-                for ((dp, cause) in deductions) {
+                for ((dp, trace) in deductions) {
                     if (!positiveDeductions.containsKey(dp)) {
+                        deducedSomething = true
                         if (!subsets.containsKey(dp)) {
                             classifyNewDatapoints(listOf(dp))
                         }
-                        if (forcedFalse.contains(dp)) {
-                            throw ContradictoryException(emptyList(), "Datapoint forced both false and true: $dp") //TODO maybe retrace deductions
-                        }
-                        deducedSomething = true
-                        positiveDeductions[dp] = cause
+//                        if (forcedFalse.contains(dp)) {
+//                            throw ContradictoryException(emptyList(), "Datapoint forced both false and true: $dp") //TODO maybe retrace deductions
+//                        }
+                        positiveDeductions[dp] = trace
                         subsets[dp]?.forEach { subset ->
-                            if (forcedFalse.contains(subset)) {
-                                throw ContradictoryException(emptyList(), "Subset forced both false and true: $subset") //TODO maybe retrace deductions
-                            }
-                            positiveDeductions.putIfAbsent(subset, cause)
+//                            if (forcedFalse.contains(subset)) {
+//                                throw ContradictoryException(emptyList(), "Subset forced both false and true: $subset") //TODO maybe retrace deductions
+//                            }
+                            positiveDeductions.putIfAbsent(subset, trace)
                         }
                     }
                 }
@@ -148,18 +156,18 @@ class ConstraintSystem private constructor(
                                         ?: error("Negative deductions revealed contradiction")
                                 )
                             } else {
-                                subsets[constraint.target]?.asSequence()     //Subsets
-                                        ?.filter { forcedFalse.contains(it) }   //Forced false subsets
-                                        ?.map { subset ->
+                                subsets[constraint.target]!!.asSequence()     //Subsets
+                                        .filter { subset -> forcedFalse.contains(subset) }   //Forced false subsets
+                                        .map { subset ->
                                             constraint.deduceNegatively(subset)
                                                     ?: error("Negative deductions revealed contradiction with subset")
                                         }
-                                        ?: emptySequence()
                             }
                         }
                 var deducedSomething = false
                 for (deduction in deductions) {
                     if (!forcedFalse.contains(deduction)) {
+                        deducedSomething = true
                         if (!subsets.containsKey(deduction)) {
                             classifyNewDatapoints(listOf(deduction))
                         }
@@ -167,7 +175,6 @@ class ConstraintSystem private constructor(
                             error("Negative deduction already forced true")
 //                            throw ContradictoryException(emptyList(), "Datapoint forced both true and false: $deduction")
                         }
-                        deducedSomething = true
                         forcedFalse.add(deduction)
                         subsets[deduction]?.firstOrNull { positiveDeductions.containsKey(it) }?.let {
                             error("Subset of negative deduction already forced true")
@@ -179,11 +186,10 @@ class ConstraintSystem private constructor(
             } while (deducedSomething)
         }
 
-        private fun classifyNewDatapoints(newDps: List<Datapoint?>) {
-            val toProcess = mutableListOf<Datapoint>()
-            newDps.filterNotNullTo(toProcess)
+        private fun classifyNewDatapoints(newDps: Iterable<Datapoint?>) {
+            val toProcess = newDps.filterNotNullTo(mutableListOf())
             while (toProcess.isNotEmpty()) {
-                val newDp = toProcess.removeAt(0)
+                val newDp = toProcess.removeAt(toProcess.lastIndex)
                 if (!subsets.containsKey(newDp)) {
                     newDatapoints.add(newDp)
                     val newList = mutableListOf<Datapoint>()
@@ -228,6 +234,7 @@ class ConstraintSystem private constructor(
             val reasons = mutableListOf(trace.constraint)
             while (usedSource != null) {
                 val reason = positiveDeductions[usedSource] ?: error("Unreasoned deduction")
+                assert(reason.constraint.source == null || (reason.usedSource != null && reason.usedSource.subsetOf(reason.constraint.source)))
                 reasons.add(reason.constraint)
                 usedSource = reason.usedSource
             }
