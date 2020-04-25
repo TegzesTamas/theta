@@ -37,7 +37,7 @@ fun main(args: Array<String>) {
                 println("*********** Contradictory constraints ***********")
                 println(e.contradictorySubset)
             }
-            println("UNSAFE")
+            println("UNSAFE, \"${e.contradictorySubset}\"")
         }
     } ?: error("Could not parse model")
 }
