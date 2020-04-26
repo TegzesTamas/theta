@@ -18,7 +18,7 @@ import hu.bme.mit.theta.core.type.inttype.IntType
 import java.util.*
 import kotlin.math.min
 
-class Learner(private var constraintSystem: ConstraintSystem) {
+class Learner(private var constraintSystem: ConstraintSystem, private val atoms: Set<Expr<BoolType>> = emptySet()) {
 
     private lateinit var root: BuildNode
 
@@ -83,19 +83,19 @@ class Learner(private var constraintSystem: ConstraintSystem) {
         }
 
         if (wholeDatapoints.none { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.none { constraintSystem.forcedFalse.contains(it) }) {
-            tryToExecuteLabeling(wholeDatapoints,true)?.let {
+            tryToExecuteLabeling(wholeDatapoints, true)?.let {
                 return it
             }
         }
         if (wholeDatapoints.none { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.none { constraintSystem.forcedTrue.contains(it) }) {
-            tryToExecuteLabeling(wholeDatapoints,false)?.let {
+            tryToExecuteLabeling(wholeDatapoints, false)?.let {
                 return it
             }
         }
         return null
     }
 
-    private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, label : Boolean) : DecisionTree.Leaf?{
+    private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, label: Boolean): DecisionTree.Leaf? {
         val allNewDatapoints = mutableListOf<Pair<Datapoint, Boolean?>>()
         try {
             val builder = ConstraintSystem.Builder(constraintSystem)
@@ -118,7 +118,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
             builder.addDatapoints(allNewDatapoints.map { it.first })
             builder.getAndResetNewDatapoints()
             var newDatapoints: List<Pair<Datapoint, Boolean?>> = allNewDatapoints
-            while (newDatapoints.isNotEmpty()){
+            while (newDatapoints.isNotEmpty()) {
                 builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
                 builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
                 newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
@@ -168,6 +168,28 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 }
             }
         }
+
+        for (atom in atoms) {
+            val decision = ExprDecision(atom)
+            val trueDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) }
+            val falseDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeFalse(it) }
+            val trueError = classificationError(
+                    trueDatapoints.count { constraintSystem.forcedTrue.contains(it) },
+                    trueDatapoints.count { constraintSystem.forcedFalse.contains(it) },
+                    trueDatapoints.count()
+            )
+            val falseError = classificationError(
+                    falseDatapoints.count { constraintSystem.forcedTrue.contains(it) },
+                    falseDatapoints.count { constraintSystem.forcedFalse.contains(it) },
+                    falseDatapoints.count()
+            )
+            val newError = trueError + falseError
+            if (bestError == null || newError < bestError) {
+                bestError = newError
+                bestExpr = atom
+            }
+        }
+
         if (bestExpr != null && bestError != null) {
             return ExprDecision(bestExpr)
         } else {
@@ -275,7 +297,7 @@ class Learner(private var constraintSystem: ConstraintSystem) {
                 datapointCanBeTrue && datapointCanBeFalse -> {
                     val aLabel = trueChild.classifyNewDatapoint(datapoint, true)
                     val bLabel = falseChild.classifyNewDatapoint(datapoint, true)
-                    if(aLabel == bLabel){
+                    if (aLabel == bLabel) {
                         aLabel
                     } else {
                         null
