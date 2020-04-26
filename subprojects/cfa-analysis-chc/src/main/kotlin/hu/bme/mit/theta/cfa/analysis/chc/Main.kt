@@ -30,8 +30,8 @@ fun main(args: Array<String>) {
         }
         val solver = Z3SolverFactory.getInstace().createSolver()
         try {
-            findInvariantsFor(chcSystem, solver)
-            println("SAFE")
+            val invariants = findInvariantsFor(chcSystem, solver)
+            println("SAFE, \"$invariants\"")
         } catch (e: ContradictoryException) {
             if (DEBUG) {
                 println("*********** Contradictory constraints ***********")
