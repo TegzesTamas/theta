@@ -14,6 +14,11 @@ class ConstraintSystem private constructor(
         get() = positiveDeductions.keys
     val datapoints: Set<Datapoint>
         get() = subsets.keys
+    val datapointsByInvariant by lazy {
+        datapoints.groupBy { it.invariant }
+    }
+
+    fun builder(): Builder = Builder(this)
 
     private data class DeductionTrace(val constraint: Constraint, val usedSource: Datapoint?)
     class Builder {

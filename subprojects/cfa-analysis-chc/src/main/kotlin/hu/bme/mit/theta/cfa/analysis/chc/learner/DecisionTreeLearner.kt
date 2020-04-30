@@ -102,7 +102,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
         private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, label: Boolean): DecisionTree.Leaf? {
             val allNewDatapoints = mutableListOf<Pair<Datapoint, Boolean?>>()
             try {
-                val builder = ConstraintSystem.Builder(constraintSystem)
+                val builder = constraintSystem.builder()
                 when (label) {
                     true -> builder.labelDatapointsTrue(wholeDatapoints)
                     false -> builder.labelDatapointsFalse(wholeDatapoints)
@@ -118,7 +118,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                 constraintSystem = builder.build()
                 return DecisionTree.Leaf(label)
             } catch (e: ContradictoryException) {
-                val builder = ConstraintSystem.Builder(constraintSystem)
+                val builder = constraintSystem.builder()
                 builder.addDatapoints(allNewDatapoints.map { it.first })
                 builder.getAndResetNewDatapoints()
                 var newDatapoints: List<Pair<Datapoint, Boolean?>> = allNewDatapoints
