@@ -1,7 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc
 
 import hu.bme.mit.theta.cfa.CFA
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.findInvariantsFor
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.stmt.Stmts.*

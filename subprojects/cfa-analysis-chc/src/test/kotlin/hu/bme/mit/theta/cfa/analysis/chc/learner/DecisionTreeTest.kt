@@ -2,9 +2,9 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.DummyCHC
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Constraint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.type.anytype.Exprs.Prime

@@ -4,10 +4,10 @@ import hu.bme.mit.theta.cfa.analysis.chc.CHCSystem
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.addCHC
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Constraint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.ExprUtils

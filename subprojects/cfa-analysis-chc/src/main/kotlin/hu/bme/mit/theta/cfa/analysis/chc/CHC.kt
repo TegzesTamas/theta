@@ -1,7 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc
 
 import com.google.common.collect.Iterables
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr

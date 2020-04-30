@@ -1,4 +1,4 @@
-package hu.bme.mit.theta.cfa.analysis.chc.learner.constraint
+package hu.bme.mit.theta.cfa.analysis.chc.constraint
 
 import hu.bme.mit.theta.cfa.analysis.chc.CHC
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant

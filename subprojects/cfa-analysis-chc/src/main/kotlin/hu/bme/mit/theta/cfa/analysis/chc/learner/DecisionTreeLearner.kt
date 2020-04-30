@@ -2,9 +2,9 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ContradictoryException
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.Decision
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.DecisionTree
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ExprDecision

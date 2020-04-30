@@ -1,7 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
-import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Datapoint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ExprDecision
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.VarValueDecision
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
