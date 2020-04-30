@@ -8,6 +8,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.constraint.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
+import hu.bme.mit.theta.cfa.analysis.chc.utilities.removePrimes
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.ExprUtils
@@ -20,9 +22,14 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
     var candidates: InvariantCandidates
     val atoms = mutableSetOf<Expr<BoolType>>()
     for (chc in chcSystem.chcs) {
-        ExprUtils.collectAtoms(chc.body, atoms)
+        val rawAtoms = mutableListOf<Expr<BoolType>>()
+        ExprUtils.collectAtoms(chc.body, rawAtoms)
+        rawAtoms.mapTo(atoms) { removePrimes(it) }
     }
-    val learner: Learner = DecisionTreeLearner(atoms)
+    if (DEBUG) {
+        println("ATOMS: $atoms")
+    }
+    var learner: Learner = SorcarLearner(atoms)
     do {
         val constraintSystem = constraintSystemBuilder.build()
         var allUnsat = true
@@ -34,7 +41,16 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
             }
             println("*** END OF CONSTRAINTS ***")
         }
-        candidates = learner.suggestCandidates(constraintSystem)
+        try {
+            candidates = learner.suggestCandidates(constraintSystem)
+        } catch (e: Learner.CandidatesNotExpressibleException) {
+            if (DEBUG) {
+                println("Exception occured: $e")
+                println("Switching over to DecisionTreeLearner")
+            }
+            learner = DecisionTreeLearner(atoms)
+            candidates = learner.suggestCandidates(constraintSystem)
+        }
         if (DEBUG) println("Found candidates: $candidates")
         if (DEBUG) println()
         for (chc in chcSystem.chcs) {
