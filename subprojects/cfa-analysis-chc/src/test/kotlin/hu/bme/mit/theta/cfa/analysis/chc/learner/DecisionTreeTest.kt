@@ -42,8 +42,8 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(dpB, null, DummyCHC.unchanging))
                 .build()
 
-        val tree = Learner(constraintsSystem).buildTree()
-        val expr = tree.candidates[invariant]
+        val candidates = DecisionTreeLearner().suggestCandidates(constraintsSystem)
+        val expr = candidates[invariant]
         assertEquals(True(), ExprUtils.simplify(expr, valuationA))
         assertEquals(False(), ExprUtils.simplify(expr, valuationB))
         assertEquals(1, expr.arity)
@@ -74,9 +74,9 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(dpB, null, DummyCHC.unchanging))
                 .build()
 
-        val tree = Learner(constraintSystem).buildTree()
-        val exprA = tree.candidates[invariantA]
-        val exprB = tree.candidates[invariantB]
+        val candidates = DecisionTreeLearner().suggestCandidates(constraintSystem)
+        val exprA = candidates[invariantA]
+        val exprB = candidates[invariantB]
         assertEquals(True(), ExprUtils.simplify(exprA, valuationA))
         assertEquals(1, exprA.arity)
         assertEquals(0, exprB.arity)
@@ -102,8 +102,7 @@ internal class DecisionTreeTest {
                 .addConstraint(Constraint(dpSuperSet, dpUnrelated, DummyCHC(x, y)))
                 .build()
 
-        val tree = Learner(constraintSystem).buildTree()
-        val candidates = tree.candidates
+        val candidates = DecisionTreeLearner().suggestCandidates(constraintSystem)
         val invACandidate = candidates[invA]
         val invBCandidate = candidates[invB]
         assertEquals("Constraint 1 not honored.", True(), ExprUtils.simplify(invACandidate, dpTrue.valuation))

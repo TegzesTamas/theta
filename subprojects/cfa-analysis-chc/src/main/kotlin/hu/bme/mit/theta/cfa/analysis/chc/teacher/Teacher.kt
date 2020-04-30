@@ -4,6 +4,7 @@ import hu.bme.mit.theta.cfa.analysis.chc.CHCSystem
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.addCHC
+import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.Constraint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.constraint.ConstraintSystem
@@ -21,6 +22,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
     for (chc in chcSystem.chcs) {
         ExprUtils.collectAtoms(chc.body, atoms)
     }
+    val learner: Learner = DecisionTreeLearner(atoms)
     do {
         val constraintSystem = constraintSystemBuilder.build()
         var allUnsat = true
@@ -32,8 +34,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
             }
             println("*** END OF CONSTRAINTS ***")
         }
-        val decTree = Learner(constraintSystem, atoms).buildTree()
-        candidates = decTree.candidates
+        candidates = learner.suggestCandidates(constraintSystem)
         if (DEBUG) println("Found candidates: $candidates")
         if (DEBUG) println()
         for (chc in chcSystem.chcs) {
