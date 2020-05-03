@@ -127,6 +127,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                     builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
                     newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
                 }
+                constraintSystem = builder.build()
                 return null
             }
 
