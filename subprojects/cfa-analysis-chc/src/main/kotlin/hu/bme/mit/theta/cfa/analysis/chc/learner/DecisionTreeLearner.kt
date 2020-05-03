@@ -106,10 +106,9 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                 when (label) {
                     true -> builder.labelDatapointsTrue(wholeDatapoints)
                     false -> builder.labelDatapointsFalse(wholeDatapoints)
-
                 }
                 do {
-                    val newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
+                    val newDatapoints = builder.getAndResetNewDatapoints().map { it to classifyNewDatapoint(it) }
                     allNewDatapoints.addAll(newDatapoints)
                     builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
                     builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
@@ -125,7 +124,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                 while (newDatapoints.isNotEmpty()) {
                     builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
                     builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
-                    newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
+                    newDatapoints = builder.getAndResetNewDatapoints().map { it to classifyNewDatapoint(it) }
                 }
                 constraintSystem = builder.build()
                 return null
@@ -282,6 +281,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
 
         private fun classificationError(mustBeTrue: Int, mustBeFalse: Int, total: Int): Double = min(mustBeTrue, mustBeFalse) + (total - mustBeTrue - mustBeFalse) / 2.0
 
+        private fun classifyNewDatapoint(dp: Datapoint): Boolean? = root.classifyNewDatapoint(dp, false)
     }
 
 
