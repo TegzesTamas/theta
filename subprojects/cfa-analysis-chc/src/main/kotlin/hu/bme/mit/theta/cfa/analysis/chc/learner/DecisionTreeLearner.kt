@@ -291,7 +291,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
         fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean?
     }
 
-    private data class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) : BuildNode {
+    private class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) : BuildNode {
         override val built: DecisionTree.Branch?
             get() {
                 return DecisionTree.Branch(pivot, trueChild.built ?: return null, falseChild.built ?: return null)
@@ -334,7 +334,7 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
     }
 
 
-    private data class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode {
+    private class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode {
         override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? = built.label
     }
 }
