@@ -11,11 +11,12 @@ import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.utils.ExprUtils.simplify
 
 class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
+
     override fun suggestCandidates(constraintSystem: ConstraintSystem): CNFCandidates {
         val candidates = mutableMapOf<Invariant, MutableList<Expr<BoolType>>>()
 
         for (invariant in constraintSystem.datapointsByInvariant.keys) {
-            candidates[invariant] = atoms.toMutableList()
+            candidates[invariant] = atoms.filterTo(mutableListOf()) { isRelevant(it, invariant, constraintSystem) }
         }
 
         var curCS = constraintSystem
@@ -45,4 +46,10 @@ class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
         } while (!consistent)
         return CNFCandidates(listOf(), candidates.mapValues { listOf(And(it.value)) })
     }
+
+    private fun isRelevant(atom: Expr<BoolType>, invariant: Invariant, constraintSystem: ConstraintSystem) =
+            constraintSystem.run {
+                forcedFalse.any { dp -> dp.invariant == invariant && simplify(atom, dp.valuation) != True() }
+                        || constraints.any { it.source != null && it.source.invariant == invariant && simplify(atom, it.source.valuation) != True() }
+            }
 }
