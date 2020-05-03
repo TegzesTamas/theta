@@ -45,7 +45,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
             candidates = learner.suggestCandidates(constraintSystem)
         } catch (e: Learner.CandidatesNotExpressibleException) {
             if (DEBUG) {
-                println("Exception occured: $e")
+                println("Exception occurred: $e")
                 println("Switching over to DecisionTreeLearner")
             }
             learner = DecisionTreeLearner(atoms)

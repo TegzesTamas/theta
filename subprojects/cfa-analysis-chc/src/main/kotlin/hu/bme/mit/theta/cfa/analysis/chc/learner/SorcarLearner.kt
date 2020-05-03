@@ -22,7 +22,7 @@ class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
 
         do {
             var consistent = true
-            var builder = curCS.builder()
+            val builder = curCS.builder()
             for ((invariant, chosenAtoms) in candidates) {
                 val datapoints = curCS.datapointsByInvariant[invariant] ?: emptyList()
                 val forcedTrue = datapoints.filter { curCS.forcedTrue.contains(it) }
