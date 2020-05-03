@@ -5,6 +5,11 @@ import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.core.decl.VarDecl
 import hu.bme.mit.theta.core.model.MutableValuation
 import hu.bme.mit.theta.core.model.Valuation
+import hu.bme.mit.theta.core.type.Expr
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.False
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
+import hu.bme.mit.theta.core.type.booltype.BoolType
+import hu.bme.mit.theta.core.utils.ExprUtils.simplify
 
 data class Constraint(val source: Datapoint?, val target: Datapoint?, val causingCHC: CHC) {
     override fun toString(): String = "[$source -> $target]"
@@ -13,6 +18,13 @@ data class Constraint(val source: Datapoint?, val target: Datapoint?, val causin
 data class Datapoint(val invariant: Invariant, val valuation: Valuation) {
     override fun toString(): String = "$invariant(${valuation.toMap()})"
 }
+
+fun Datapoint.eval(expr: Expr<BoolType>): Boolean? =
+        when (simplify(expr, valuation)) {
+            True() -> true
+            False() -> false
+            else -> null
+        }
 
 fun Constraint.deducePositively(forcedTrue: Datapoint): Datapoint? {
     if (source == null) {

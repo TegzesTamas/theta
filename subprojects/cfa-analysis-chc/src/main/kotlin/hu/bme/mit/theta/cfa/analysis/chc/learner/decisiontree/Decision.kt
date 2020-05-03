@@ -4,6 +4,7 @@ import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.disjoint
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.eval
 import hu.bme.mit.theta.core.model.Valuation
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.AndExpr
@@ -11,7 +12,6 @@ import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.Not
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.type.booltype.NotExpr
-import hu.bme.mit.theta.core.utils.ExprUtils
 
 
 interface Decision {
@@ -76,6 +76,6 @@ data class ExprDecision(override val trueExpr: Expr<BoolType>) : LogicDecision()
     override val falseExpr: Expr<BoolType>
         get() = Not(trueExpr)
 
-    override fun datapointCanBeTrue(datapoint: Datapoint): Boolean = ExprUtils.simplify(trueExpr, datapoint.valuation) != BoolExprs.False()
-    override fun datapointCanBeFalse(datapoint: Datapoint): Boolean = ExprUtils.simplify(trueExpr, datapoint.valuation) != BoolExprs.True()
+    override fun datapointCanBeTrue(datapoint: Datapoint): Boolean = datapoint.eval(trueExpr) != false
+    override fun datapointCanBeFalse(datapoint: Datapoint): Boolean = datapoint.eval(trueExpr) != true
 }

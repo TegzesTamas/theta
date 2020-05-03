@@ -4,11 +4,10 @@ import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
+import hu.bme.mit.theta.cfa.analysis.chc.constraint.eval
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
-import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
 import hu.bme.mit.theta.core.type.booltype.BoolType
-import hu.bme.mit.theta.core.utils.ExprUtils.simplify
 
 class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
 
@@ -28,10 +27,10 @@ class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
                 val datapoints = curCS.datapointsByInvariant[invariant] ?: emptyList()
                 val forcedTrue = datapoints.filter { curCS.forcedTrue.contains(it) }
                 chosenAtoms.retainAll { atom ->
-                    forcedTrue.all { simplify(atom, it.valuation) == True() }
+                    forcedTrue.all { it.eval(atom) == true }
                 }
                 val newlyTrueDatapoints = datapoints.filter { dp ->
-                    !forcedTrue.contains(dp) && chosenAtoms.all { atom -> simplify(atom, dp.valuation) == True() }
+                    !forcedTrue.contains(dp) && chosenAtoms.all { atom -> dp.eval(atom) == true }
                 }
                 if (newlyTrueDatapoints.isNotEmpty()) {
                     consistent = false
@@ -49,7 +48,7 @@ class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
 
     private fun isRelevant(atom: Expr<BoolType>, invariant: Invariant, constraintSystem: ConstraintSystem) =
             constraintSystem.run {
-                forcedFalse.any { dp -> dp.invariant == invariant && simplify(atom, dp.valuation) != True() }
-                        || constraints.any { it.source != null && it.source.invariant == invariant && simplify(atom, it.source.valuation) != True() }
+                forcedFalse.any { dp -> dp.invariant == invariant && dp.eval(atom) != true }
+                        || constraints.any { it.source != null && it.source.invariant == invariant && it.source.eval(atom) != true }
             }
 }
