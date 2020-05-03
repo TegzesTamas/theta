@@ -110,9 +110,9 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                 }
                 do {
                     val newDatapoints = builder.getAndResetNewDatapoints().map { it to root.classifyNewDatapoint(it, false) }
+                    allNewDatapoints.addAll(newDatapoints)
                     builder.labelDatapointsTrue(newDatapoints.filter { it.second == true }.map { it.first })
                     builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
-                    allNewDatapoints.addAll(newDatapoints)
                 } while (newDatapoints.isNotEmpty())
                 assert(allNewDatapoints.toSet().size == allNewDatapoints.size)
                 constraintSystem = builder.build()
