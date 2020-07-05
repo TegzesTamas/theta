@@ -18,11 +18,11 @@ import org.junit.Test
 
 
 class TeacherLearnerTest {
-    private var solver: Solver = Z3SolverFactory.getInstace().createSolver()
+    private var solver: Solver = Z3SolverFactory.getInstance().createSolver()
 
     @Before
     fun before() {
-        solver = Z3SolverFactory.getInstace().createSolver()
+        solver = Z3SolverFactory.getInstance().createSolver()
     }
 
     @Test(timeout = 10000)

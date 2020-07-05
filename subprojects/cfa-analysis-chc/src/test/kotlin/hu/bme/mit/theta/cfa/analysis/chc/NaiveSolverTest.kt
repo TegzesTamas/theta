@@ -18,7 +18,7 @@ import org.junit.Assert
 import org.junit.Test
 
 class NaiveSolverTest {
-    private val solver: Solver = Z3SolverFactory.getInstace().createSolver()
+    private val solver: Solver = Z3SolverFactory.getInstance().createSolver()
 
     @Test(timeout = 5000)
     fun topDownUnsafeTest() {

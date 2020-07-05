@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
             }
             println()
         }
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         try {
             val invariants = findInvariantsFor(chcSystem, solver)
             println("SAFE, \"$invariants\"")

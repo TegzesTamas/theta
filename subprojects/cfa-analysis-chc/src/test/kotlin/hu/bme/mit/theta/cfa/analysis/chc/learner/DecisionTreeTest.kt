@@ -107,7 +107,7 @@ internal class DecisionTreeTest {
         val invBCandidate = candidates[invB]
         assertEquals("Constraint 1 not honored.", True(), ExprUtils.simplify(invACandidate, dpTrue.valuation))
         assertEquals("Constraint 2 not honored.", False(), ExprUtils.simplify(invACandidate, dpFalse.valuation))
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         WithPushPop(solver).use {
             solver.add(PathUtils.unfold(And(invACandidate, dpSuperSet.valuation.toExpr(), Prime(Not(invBCandidate)), dpUnrelated.valuation.toExpr()), 0))
             assertTrue("Constraint 3 not honored", solver.check().isUnsat)

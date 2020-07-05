@@ -37,7 +37,7 @@ class CfaToChcTest {
         val chcs = cfaToChc(cfa).chcs
         Assert.assertEquals("Too many chcs: $chcs", 1, chcs.size)
 
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         solver.push()
         solver.addCHC(chcs.first(), GenericCandidates(True(), emptyMap()))
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs.first()}", SolverStatus.UNSAT, solver.check())
@@ -72,7 +72,7 @@ class CfaToChcTest {
 
         Assert.assertEquals("Incorrect number of chc: $chcs", 2, chcs.size)
 
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         for (chc in chcs) {
             solver.push()
             solver.addCHC(chc, GenericCandidates(True(), emptyMap()))
@@ -109,7 +109,7 @@ class CfaToChcTest {
 
         Assert.assertEquals("Incorrect number of chc: $chcs", 4, chcs.size)
 
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         var satCount = 0
         var unsatCount = 0
         for (chc in chcs) {
@@ -155,7 +155,7 @@ class CfaToChcTest {
         val invariants = chcSystem.invariants
         Assert.assertEquals("Incorrect number of loop invariants: $invariants", 1, invariants.size)
 
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         val invariantExpr = IntExprs.Eq(x.ref, IntExprs.Int(0))
         for (chc in chcs) {
             solver.push()
@@ -209,7 +209,7 @@ class CfaToChcTest {
                 ),
                 Invariant(d.name) to IntExprs.Gt(y.ref, IntExprs.Int(0)))
 
-        val solver = Z3SolverFactory.getInstace().createSolver()
+        val solver = Z3SolverFactory.getInstance().createSolver()
         for (chc in chcs) {
             solver.push()
             solver.addCHC(chc, GenericCandidates(True(), candidates))
