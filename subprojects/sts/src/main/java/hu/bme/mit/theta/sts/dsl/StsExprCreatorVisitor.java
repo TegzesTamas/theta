@@ -41,8 +41,10 @@ import static hu.bme.mit.theta.core.type.rattype.RatExprs.Rat;
 import static hu.bme.mit.theta.sts.dsl.StsDslHelper.createParamList;
 import static java.util.stream.Collectors.toList;
 
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -519,14 +521,14 @@ final class StsExprCreatorVisitor extends StsDslBaseVisitor<Expr<?>> {
 
 	@Override
 	public IntLitExpr visitIntLitExpr(final IntLitExprContext ctx) {
-		final int value = Integer.parseInt(ctx.value.getText());
+		final var value = new BigInteger(ctx.value.getText());
 		return Int(value);
 	}
 
 	@Override
 	public RatLitExpr visitRatLitExpr(final RatLitExprContext ctx) {
-		final int num = Integer.parseInt(ctx.num.getText());
-		final int denom = Integer.parseInt(ctx.denom.getText());
+		final var num = new BigInteger(ctx.num.getText());
+		final var denom = new BigInteger(ctx.denom.getText());
 		return Rat(num, denom);
 	}
 
@@ -534,7 +536,7 @@ final class StsExprCreatorVisitor extends StsDslBaseVisitor<Expr<?>> {
 	public Expr<?> visitIdExpr(final IdExprContext ctx) {
 		final Optional<? extends Symbol> optSymbol = currentScope.resolve(ctx.id.getText());
 
-		checkArgument(optSymbol.isPresent());
+		if (optSymbol.isEmpty()) throw new NoSuchElementException("Identifier '" + ctx.id.getText() + "' not found");
 		final Symbol symbol = optSymbol.get();
 
 		checkArgument(symbol instanceof DeclSymbol);

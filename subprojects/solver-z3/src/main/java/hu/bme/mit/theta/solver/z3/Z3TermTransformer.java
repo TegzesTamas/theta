@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
+import com.microsoft.z3.ArrayExpr;
 import com.microsoft.z3.ArraySort;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
@@ -72,6 +73,7 @@ import hu.bme.mit.theta.core.type.booltype.TrueExpr;
 import hu.bme.mit.theta.core.type.functype.FuncType;
 import hu.bme.mit.theta.core.type.inttype.IntDivExpr;
 import hu.bme.mit.theta.core.type.inttype.IntToRatExpr;
+import hu.bme.mit.theta.core.type.inttype.IntModExpr;
 import hu.bme.mit.theta.core.utils.BvUtils;
 import hu.bme.mit.theta.core.utils.TypeUtils;
 import static hu.bme.mit.theta.core.type.arraytype.ArrayExprs.Array;
@@ -105,13 +107,14 @@ final class Z3TermTransformer {
 		environment.put("select", exprBinaryOperator(ArrayReadExpr::create));
 		environment.put("store", exprTernaryOperator(ArrayWriteExpr::create));
 		environment.put("to_real", exprUnaryOperator(IntToRatExpr::create));
+		environment.put("mod", exprBinaryOperator(IntModExpr::create));
 	}
 
 	public Expr<?> toExpr(final com.microsoft.z3.Expr term) {
 		return transform(term, null, new ArrayList<>());
 	}
 
-	public Expr<?> toFuncLitExpr(final com.microsoft.z3.FuncDecl funcDecl, final Model model,
+	public Expr<?> toFuncLitExpr(final FuncDecl funcDecl, final Model model,
 								 final List<Decl<?>> vars) {
 		final com.microsoft.z3.FuncInterp funcInterp = model.getFuncInterp(funcDecl);
 		final List<ParamDecl<?>> paramDecls = transformParams(vars, funcDecl.getDomain());
@@ -178,21 +181,21 @@ final class Z3TermTransformer {
 
 	private Expr<?> transformIntLit(final com.microsoft.z3.Expr term) {
 		final com.microsoft.z3.IntNum intNum = (com.microsoft.z3.IntNum) term;
-		final int value = intNum.getInt();
+		final var value = intNum.getBigInteger();
 		return Int(value);
 	}
 
 	private Expr<?> transformRatLit(final com.microsoft.z3.Expr term) {
 		final com.microsoft.z3.RatNum ratNum = (com.microsoft.z3.RatNum) term;
-		final int num = ratNum.getNumerator().getInt();
-		final int denom = ratNum.getDenominator().getInt();
+		final var num = ratNum.getNumerator().getBigInteger();
+		final var denom = ratNum.getDenominator().getBigInteger();
 		return Rat(num, denom);
 	}
 
 	private Expr<?> transformArrLit(final com.microsoft.z3.Expr term, final Model model,
 									final List<Decl<?>> vars) {
-		final com.microsoft.z3.ArrayExpr arrayExpr = (com.microsoft.z3.ArrayExpr) term;
-		final com.microsoft.z3.ArraySort sort = (ArraySort) arrayExpr.getSort();
+		final ArrayExpr arrayExpr = (ArrayExpr) term;
+		final ArraySort sort = (ArraySort) arrayExpr.getSort();
 		return createArrayLitExpr(sort, Arrays.asList(), transform(arrayExpr.getArgs()[0], model, vars));
 	}
 
@@ -205,10 +208,9 @@ final class Z3TermTransformer {
 		return BvUtils.bigIntegerToBvLitExpr(value, bvNum.getSortSize(), false);
 	}
 
-	private Expr<?> transformApp(final com.microsoft.z3.Expr term, final com.microsoft.z3.Model model,
-									   final List<Decl<?>> vars) {
+	private Expr<?> transformApp(final com.microsoft.z3.Expr term, final Model model, final List<Decl<?>> vars) {
 
-		final com.microsoft.z3.FuncDecl funcDecl = term.getFuncDecl();
+		final FuncDecl funcDecl = term.getFuncDecl();
 		final String symbol = funcDecl.getName().toString();
 
 		if (environment.containsKey(symbol)) {
