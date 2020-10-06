@@ -9,6 +9,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.ListPattern
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.removePrimes
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
@@ -48,7 +50,7 @@ fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates
                 println("Exception occurred: $e")
                 println("Switching over to DecisionTreeLearner")
             }
-            learner = DecisionTreeLearner(atoms)
+            learner = DecisionTreeLearner(predicatePatterns = listOf(ListPattern(atoms), LeqPattern))
             candidates = learner.suggestCandidates(constraintSystem)
         }
         if (DEBUG) println("Found candidates: $candidates")

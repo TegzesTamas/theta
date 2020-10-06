@@ -5,21 +5,15 @@ import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.Decision
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.DecisionTree
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ExprDecision
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.InvariantDecision
-import hu.bme.mit.theta.core.decl.Decl
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.*
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.PredicatePattern
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
-import hu.bme.mit.theta.core.type.inttype.IntExprs.Eq
-import hu.bme.mit.theta.core.type.inttype.IntExprs.Leq
-import hu.bme.mit.theta.core.type.inttype.IntLitExpr
-import hu.bme.mit.theta.core.type.inttype.IntType
 import java.util.*
-import kotlin.math.min
 
-class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) : Learner {
+class DecisionTreeLearner(private val measure: ImpurityMeasure = ClassificationError,
+                          private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates = DecisionTreeBuilder(constraintSystem).buildTree().candidates
 
@@ -142,55 +136,17 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
                 return InvariantDecision(chosenInvariants)
             }
 
-            val variableToOccurrences = datapointsToSplit.asSequence()
-                    .flatMap { datapoint ->
-                        datapoint.valuation.toMap()
-                                .asSequence()
-                                .map { (variable, value) ->
-                                    (value as? IntLitExpr)?.let {
-                                        @Suppress("UNCHECKED_CAST")
-                                        VariableOccurrence(variable as Decl<IntType>, it, datapoint)
-                                    }
-                                }
-                                .filterNotNull()
-                    }
-                    .groupBy { it.variable }
-                    .mapValues { (_, occurrences) -> occurrences.groupBy { it.lit } }
-
             var bestExpr: Expr<BoolType>? = null
             var bestError: Double? = null
 
-            for ((variable, occurrences) in variableToOccurrences) {
-                if (occurrences.size > 1) {
-                    val bestSplit = findBestSplitForVariable(variable, occurrences, datapointsToSplit)
-                    if (bestSplit != null) {
-                        val (expr, error) = bestSplit
-                        if (bestError == null || error < bestError) {
-                            bestExpr = expr
-                            bestError = error
-                        }
+            for (pattern in predicatePatterns) {
+                val split = pattern.findBestSplit(datapointsToSplit, constraintSystem, measure)
+                if (split != null) {
+                    val (expr, error) = split
+                    if (bestError == null || error < bestError) {
+                        bestExpr = expr
+                        bestError = error
                     }
-                }
-            }
-
-            for (atom in atoms) {
-                val decision = ExprDecision(atom)
-                val trueDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) }
-                val falseDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeFalse(it) }
-                val trueError = classificationError(
-                        trueDatapoints.count { constraintSystem.forcedTrue.contains(it) },
-                        trueDatapoints.count { constraintSystem.forcedFalse.contains(it) },
-                        trueDatapoints.count()
-                )
-                val falseError = classificationError(
-                        falseDatapoints.count { constraintSystem.forcedTrue.contains(it) },
-                        falseDatapoints.count { constraintSystem.forcedFalse.contains(it) },
-                        falseDatapoints.count()
-                )
-                val newError = trueError + falseError
-                if (bestError == null || newError < bestError) {
-                    bestError = newError
-                    bestExpr = atom
                 }
             }
 
@@ -201,92 +157,10 @@ class DecisionTreeLearner(private val atoms: Set<Expr<BoolType>> = emptySet()) :
             }
         }
 
-        private fun findBestSplitForVariable(
-                variable: Decl<IntType>,
-                occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
-                datapointsToSplit: Set<Datapoint>
-        ): Pair<Expr<BoolType>, Double>? {
-            //In splittableDps, every datapoint occurs at most once, because it assigns at most one value to a variable
-            val splittableDps = occurrencesByLit.values.flatMap { it.map { occurrence -> occurrence.datapoint } }
-            val (splittableTrue, splittableFalse) = calcForcedLabeling(splittableDps)
-            val unsplittableDps = datapointsToSplit - splittableDps
-            val (unsplittableTrue, unsplittableFalse) = calcForcedLabeling(unsplittableDps)
-
-            var leqMatchingTrue = unsplittableTrue
-            var leqMatchingFalse = unsplittableFalse
-            var matchingTotal = unsplittableDps.size
-            var leqNonMatchingTrue = unsplittableTrue + splittableTrue
-            var leqNonMatchingFalse = unsplittableFalse + splittableFalse
-            var nonMatchingTotal = splittableDps.size + unsplittableDps.size
-
-            var bestExpr: Expr<BoolType>? = null
-            var bestError: Double? = null
-
-
-            val orderedLiterals = occurrencesByLit.entries.asSequence().sortedBy { it.key.value }
-
-            for ((lit, currentOccurrences) in orderedLiterals) {
-                matchingTotal += currentOccurrences.size
-                nonMatchingTotal -= currentOccurrences.size
-
-                val currentTrue = currentOccurrences.count { it.datapoint in constraintSystem.forcedTrue }
-                val currentFalse = currentOccurrences.count { it.datapoint in constraintSystem.forcedFalse }
-
-                leqMatchingTrue += currentTrue
-                leqNonMatchingTrue -= currentTrue
-                leqMatchingFalse += currentFalse
-                leqNonMatchingFalse -= currentFalse
-
-                val leqError = classificationError(leqMatchingTrue, leqMatchingFalse, matchingTotal) +
-                        classificationError(leqNonMatchingTrue, leqNonMatchingFalse, nonMatchingTotal)
-
-                if (bestError == null || leqError < bestError) {
-                    bestExpr = Leq(variable.ref, lit)
-                    bestError = leqError
-                }
-
-                val eqError = classificationError(
-                        currentTrue + unsplittableTrue,
-                        currentFalse + unsplittableFalse,
-                        currentOccurrences.size + unsplittableDps.size
-                ) + classificationError(
-                        splittableTrue - currentTrue + unsplittableTrue,
-                        splittableFalse - currentFalse + unsplittableFalse,
-                        splittableDps.size - currentOccurrences.size + unsplittableDps.size
-                )
-                if (eqError < bestError) {
-                    bestExpr = Eq(variable.ref, lit)
-                    bestError = eqError
-                }
-            }
-            return if (bestError == null || bestExpr == null) {
-                null
-            } else {
-                bestExpr to bestError
-            }
-        }
-
-
-        private fun calcForcedLabeling(dps: Iterable<Datapoint>): ForcedLabeling {
-            var mustBeTrue = 0
-            var mustBeFalse = 0
-            for (dp in dps) {
-                when (dp) {
-                    in constraintSystem.forcedTrue -> ++mustBeTrue
-                    in constraintSystem.forcedFalse -> ++mustBeFalse
-                }
-            }
-            return ForcedLabeling(mustBeTrue, mustBeFalse)
-        }
-
-        private fun classificationError(mustBeTrue: Int, mustBeFalse: Int, total: Int): Double = min(mustBeTrue, mustBeFalse) + (total - mustBeTrue - mustBeFalse) / 2.0
-
         private fun classifyNewDatapoint(dp: Datapoint): Boolean? = root.classifyNewDatapoint(dp, false)
     }
 
 
-    private data class VariableOccurrence(val variable: Decl<IntType>, val lit: IntLitExpr, val datapoint: Datapoint)
-    private data class ForcedLabeling(val mustBeTrue: Int, val mustBeFalse: Int)
     private interface BuildNode {
         val built: DecisionTree.Node?
         fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean?
