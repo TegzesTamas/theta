@@ -3,12 +3,10 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.GenericCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
-import hu.bme.mit.theta.core.type.booltype.BoolExprs.*
+import hu.bme.mit.theta.core.type.booltype.BoolExprs.False
 import org.junit.Assert
 import org.junit.Test
-import org.mockito.Mockito
 import org.mockito.Mockito.*
-import org.mockito.Mockito.mock as mock
 
 
 internal class RoundRobinLearnerTest {
