@@ -12,6 +12,8 @@ class MultiThreadedLearner(learners: Iterable<Learner>) : Learner {
 
     private val threadData: List<LearnerThreadData>
     private val queue: LinkedList<LearnerThreadData>
+
+    @Volatile
     private var running = true
 
     init {
