@@ -64,6 +64,7 @@ class MultiThreadedLearnerTest {
         MultiThreadedLearner(listOf(mockLearner1, mockLearner2)).use { learner ->
             repeat(7) {
                 learner.suggestCandidates(cs)
+                Thread.sleep(10)
             }
             verify(mockLearner1, times(7)).suggestCandidates(cs)
             verify(mockLearner2).suggestCandidates(cs)
@@ -91,6 +92,7 @@ class MultiThreadedLearnerTest {
         } catch (e: Learner.CandidatesNotExpressibleException) {
             thrown = true
         }
+        Thread.sleep(10)
         assertTrue(thrown)
         verify(mockLearner1).suggestCandidates(cs)
         verify(mockLearner1, atLeastOnce()).close()
