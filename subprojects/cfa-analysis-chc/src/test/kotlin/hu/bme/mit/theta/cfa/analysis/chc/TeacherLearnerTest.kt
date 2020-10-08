@@ -2,12 +2,22 @@ package hu.bme.mit.theta.cfa.analysis.chc
 
 import hu.bme.mit.theta.cfa.CFA
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
-import hu.bme.mit.theta.cfa.analysis.chc.teacher.findInvariantsFor
+import hu.bme.mit.theta.cfa.analysis.chc.coordinator.SimpleCoordinator
+import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.RoundRobinLearner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.ListPattern
+import hu.bme.mit.theta.cfa.analysis.chc.teacher.SimpleTeacher
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
+import hu.bme.mit.theta.cfa.analysis.chc.utilities.removePrimes
 import hu.bme.mit.theta.core.stmt.Stmts.*
+import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.Or
+import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.type.inttype.IntExprs.*
+import hu.bme.mit.theta.core.utils.ExprUtils
 import hu.bme.mit.theta.solver.Solver
 import hu.bme.mit.theta.solver.SolverStatus
 import hu.bme.mit.theta.solver.utils.WithPushPop
@@ -18,7 +28,22 @@ import org.junit.Test
 
 
 class TeacherLearnerTest {
-    private var solver: Solver = Z3SolverFactory.getInstance().createSolver()
+    private lateinit var solver: Solver
+
+    private fun findInvariantsFor(chcSystem: CHCSystem, solver: Solver): InvariantCandidates {
+        val teacher = SimpleTeacher(solver)
+        val atoms = mutableSetOf<Expr<BoolType>>()
+        for (chc in chcSystem.chcs) {
+            val rawAtoms = mutableListOf<Expr<BoolType>>()
+            ExprUtils.collectAtoms(chc.body, rawAtoms)
+            rawAtoms.mapTo(atoms) { removePrimes(it) }
+        }
+        val sorcarLearner = SorcarLearner(atoms)
+        val dtLearner = DecisionTreeLearner(predicatePatterns = listOf(LeqPattern, ListPattern(atoms)))
+        val learner = RoundRobinLearner(listOf(sorcarLearner, dtLearner))
+        val coordinator = SimpleCoordinator(teacher, learner)
+        return coordinator.solveCHCSystem(chcSystem)
+    }
 
     @Before
     fun before() {
