@@ -36,10 +36,14 @@ class MultiThreadedCoordinator(
     private var running: Boolean = true
 
     private fun runLearner(learner: Learner, input: BlockingQueue<ConstraintSystem>, output: BlockingQueue<InvariantCandidates>) {
-        while (running) {
-            val constraintSystem = input.take()
-            val candidates = learner.suggestCandidates(constraintSystem)
-            output.put(candidates)
+        try {
+            while (running) {
+                val constraintSystem = input.take()
+                val candidates = learner.suggestCandidates(constraintSystem)
+                output.put(candidates)
+            }
+        } catch (e: InterruptedException) {
+        } catch (e: Learner.CandidatesNotExpressibleException) {
         }
     }
 
@@ -47,10 +51,13 @@ class MultiThreadedCoordinator(
                            chcSystem: CHCSystem,
                            input: BlockingQueue<InvariantCandidates>,
                            output: BlockingQueue<TeacherResult>) {
-        while (running) {
-            val candidates = input.take()
-            val constraints = teacher.checkCandidates(chcSystem, candidates)
-            output.put(TeacherResult(candidates, constraints))
+        try {
+            while (running) {
+                val candidates = input.take()
+                val constraints = teacher.checkCandidates(chcSystem, candidates)
+                output.put(TeacherResult(candidates, constraints))
+            }
+        } catch (e: InterruptedException) {
         }
     }
 
