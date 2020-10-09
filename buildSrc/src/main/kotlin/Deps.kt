@@ -15,4 +15,6 @@ object Deps {
     object Mockito {
         val core = "org.mockito:mockito-core:${Versions.mockito}"
     }
+	
+	val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:${Versions.mockitoKotlin}"
 }
