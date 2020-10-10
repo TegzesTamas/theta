@@ -12,7 +12,7 @@ interface Teacher {
     fun checkCandidates(chcSystem: CHCSystem, candidates: InvariantCandidates): Iterable<Constraint>?
 }
 
-class SimpleTeacher(val solver: Solver) : Teacher {
+class SimpleTeacher(private val solver: Solver) : Teacher {
     override fun checkCandidates(chcSystem: CHCSystem, candidates: InvariantCandidates): List<Constraint>? {
         val constraints = mutableListOf<Constraint>()
         for (chc in chcSystem.chcs) {
