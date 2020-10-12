@@ -6,6 +6,7 @@ include(
         "cfa-analysis",
         "cfa-analysis-chc",
         "cfa-cli",
+        "cfa-chc-cli",
         "common",
         "core",
         "solver",
