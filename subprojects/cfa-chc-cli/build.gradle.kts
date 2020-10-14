@@ -5,9 +5,11 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":theta-cfa"))
+    implementation(project(":theta-solver-z3"))
     implementation(project(":theta-cfa-analysis-chc"))
 }
 
 application {
-    mainClassName = "hu.bme.mit.theta.cfa.chc.cli.CfaChcCliKt"
+    mainClassName = "hu.bme.mit.theta.cfa.chc.cli.CfaChcCli"
 }
