@@ -38,7 +38,7 @@ class TeacherLearnerTest {
             ExprUtils.collectAtoms(chc.body, rawAtoms)
             rawAtoms.mapTo(atoms) { removePrimes(it) }
         }
-        val sorcarLearner = SorcarLearner(atoms)
+        val sorcarLearner = SorcarLearner(ListPattern(atoms))
         val dtLearner = DecisionTreeLearner(predicatePatterns = listOf(LeqPattern, ListPattern(atoms)))
         val learner = RoundRobinLearner(listOf(sorcarLearner, dtLearner))
         val coordinator = SimpleCoordinator(teacher, learner)

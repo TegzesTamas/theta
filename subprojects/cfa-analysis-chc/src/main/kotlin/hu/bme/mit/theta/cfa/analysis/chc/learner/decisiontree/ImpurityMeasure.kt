@@ -18,3 +18,7 @@ object ClassificationError : ImpurityMeasure {
         return min(mustBeTrue, mustBeFalse) + (total - mustBeTrue - mustBeFalse) / 2.0
     }
 }
+
+object NullError : ImpurityMeasure {
+    override fun impurity(mustBeTrue: Int, mustBeFalse: Int, total: Int): Double = 0.0
+}

@@ -3,18 +3,18 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner.predicates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ImpurityMeasure
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern.Split
 import hu.bme.mit.theta.core.decl.Decl
-import hu.bme.mit.theta.core.type.Expr
-import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.type.inttype.IntExprs
 import hu.bme.mit.theta.core.type.inttype.IntLitExpr
 import hu.bme.mit.theta.core.type.inttype.IntType
+import java.util.*
 
 object LeqPattern : PredicatePattern {
     private data class VariableOccurrence(val variable: Decl<IntType>, val lit: IntLitExpr, val datapoint: Datapoint)
     private data class ForcedLabeling(val mustBeTrue: Int, val mustBeFalse: Int)
 
-    override fun findBestSplit(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): PredicatePattern.Split? {
+    override fun findAllSplits(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): PriorityQueue<Split> {
         val variableToOccurrences = datapointsToSplit.asSequence()
                 .flatMap { datapoint ->
                     datapoint.valuation.toMap()
@@ -29,36 +29,27 @@ object LeqPattern : PredicatePattern {
                 .groupBy { it.variable }
                 .asSequence()
                 .map { (variable, occurrences) -> variable to occurrences.groupBy { it.lit } }
-        var bestExpr: Expr<BoolType>? = null
-        var bestError: Double? = null
+
+        val splits = PriorityQueue<Split>()
 
         for ((variable, occurrences) in variableToOccurrences) {
             if (occurrences.size > 1) {
-                val bestSplit = findBestSplitForVariable(variable, occurrences,
+                collectAllSplitsForVariable(splits, variable, occurrences,
                         datapointsToSplit, constraintSystem, measure)
-                if (bestSplit != null) {
-                    val (expr, error) = bestSplit
-                    if (bestError == null || error < bestError) {
-                        bestExpr = expr
-                        bestError = error
-                    }
-                }
             }
         }
-        return if (bestError == null || bestExpr == null) {
-            null
-        } else {
-            PredicatePattern.Split(bestExpr, bestError)
-        }
+
+        return splits
     }
 
-    private fun findBestSplitForVariable(
+    private fun collectAllSplitsForVariable(
+            splits: MutableCollection<Split>,
             variable: Decl<IntType>,
             occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
             datapointsToSplit: Set<Datapoint>,
             constraintSystem: ConstraintSystem,
             measure: ImpurityMeasure
-    ): Pair<Expr<BoolType>, Double>? {
+    ) {
         //In splittableDps, every datapoint occurs at most once, because it assigns at most one value to a variable
         val splittableDps = occurrencesByLit.values.flatMap { it.map { occurrence -> occurrence.datapoint } }
         val (splittableTrue, splittableFalse) = calcForcedLabeling(splittableDps, constraintSystem)
@@ -71,9 +62,6 @@ object LeqPattern : PredicatePattern {
         var leqNonMatchingTrue = unsplittableTrue + splittableTrue
         var leqNonMatchingFalse = unsplittableFalse + splittableFalse
         var nonMatchingTotal = splittableDps.size + unsplittableDps.size
-
-        var bestExpr: Expr<BoolType>? = null
-        var bestError: Double? = null
 
 
         val orderedLiterals = occurrencesByLit.entries.sortedBy { it.key.value }
@@ -93,10 +81,7 @@ object LeqPattern : PredicatePattern {
             val leqError = measure.impurity(leqMatchingTrue, leqMatchingFalse, matchingTotal) +
                     measure.impurity(leqNonMatchingTrue, leqNonMatchingFalse, nonMatchingTotal)
 
-            if (bestError == null || leqError < bestError) {
-                bestExpr = IntExprs.Leq(variable.ref, lit)
-                bestError = leqError
-            }
+            splits.add(Split(IntExprs.Leq(variable.ref, lit), leqError))
 
             val eqError = measure.impurity(
                     currentTrue + unsplittableTrue,
@@ -107,15 +92,8 @@ object LeqPattern : PredicatePattern {
                     splittableFalse - currentFalse + unsplittableFalse,
                     splittableDps.size - currentOccurrences.size + unsplittableDps.size
             )
-            if (eqError < bestError) {
-                bestExpr = IntExprs.Eq(variable.ref, lit)
-                bestError = eqError
-            }
-        }
-        return if (bestError == null || bestExpr == null) {
-            null
-        } else {
-            bestExpr to bestError
+
+            splits.add(Split(IntExprs.Eq(variable.ref, lit), eqError))
         }
     }
 

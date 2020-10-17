@@ -5,17 +5,28 @@ import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.eval
+import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.NullError
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolType
 
-class SorcarLearner(private val atoms: Set<Expr<BoolType>>) : Learner {
+class SorcarLearner(private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
+    constructor(pattern: PredicatePattern) : this(listOf(pattern))
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): CNFCandidates {
+        val atoms = predicatePatterns.flatMap { it.findAllSplits(constraintSystem.datapoints, constraintSystem, NullError) }
         val candidates = mutableMapOf<Invariant, MutableList<Expr<BoolType>>>()
 
         for (invariant in constraintSystem.datapointsByInvariant.keys) {
-            candidates[invariant] = atoms.filterTo(mutableListOf()) { isRelevant(it, invariant, constraintSystem) }
+            candidates[invariant] = atoms.mapNotNullTo(mutableListOf()) {
+                if (isRelevant(it.expr, invariant, constraintSystem)) {
+                    it.expr
+                } else {
+                    null
+                }
+            }
         }
 
         var curCS = constraintSystem

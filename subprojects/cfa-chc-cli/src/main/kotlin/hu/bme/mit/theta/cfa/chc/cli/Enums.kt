@@ -24,7 +24,7 @@ interface LearnerType {
 enum class StandaloneLearnerType : LearnerType {
 
     Sorcar {
-        override fun create(measure: ImpurityMeasure, patterns: Collection<PredicatePattern>) = SorcarLearner(emptySet())
+        override fun create(measure: ImpurityMeasure, patterns: Collection<PredicatePattern>) = SorcarLearner(patterns)
     },
     DecisionTree {
         override fun create(measure: ImpurityMeasure,
