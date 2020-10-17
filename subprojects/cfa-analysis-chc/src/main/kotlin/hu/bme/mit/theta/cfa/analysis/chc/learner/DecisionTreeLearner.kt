@@ -6,8 +6,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.*
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.PredicatePattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import java.util.*

@@ -1,4 +1,4 @@
-package hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates
+package hu.bme.mit.theta.cfa.analysis.chc.learner.predicates
 
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.Datapoint

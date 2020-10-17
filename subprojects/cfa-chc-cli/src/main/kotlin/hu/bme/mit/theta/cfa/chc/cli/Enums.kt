@@ -10,9 +10,9 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.RoundRobinLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ClassificationError
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ImpurityMeasure
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.ListPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.PredicatePattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.ListPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.Teacher
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.removePrimes
 import hu.bme.mit.theta.core.utils.ExprUtils

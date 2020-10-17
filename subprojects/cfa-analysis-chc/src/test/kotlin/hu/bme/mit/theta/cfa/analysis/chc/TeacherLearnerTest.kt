@@ -6,8 +6,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.coordinator.SimpleCoordinator
 import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.RoundRobinLearner
 import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.LeqPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.predicates.ListPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.ListPattern
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.SimpleTeacher
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.DeclManager
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.removePrimes
