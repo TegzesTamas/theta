@@ -1,0 +1,19 @@
+coordinator: MultiThreaded
+
+
+learners:
+  - type: DecisionTree
+    measure: CE
+    predicatePatterns:
+      - IntLEQ
+      - Atoms
+  - type: Sorcar
+    predicatePatterns:
+      - Atoms
+  - type: RoundRobin
+    children:
+      - type: DecisionTree
+      - type: Sorcar
+        asdf: hello
+
+teachers: 2
