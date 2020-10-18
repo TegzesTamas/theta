@@ -4,10 +4,7 @@ import hu.bme.mit.theta.cfa.analysis.chc.CHCSystem
 import hu.bme.mit.theta.cfa.analysis.chc.coordinator.Coordinator
 import hu.bme.mit.theta.cfa.analysis.chc.coordinator.MultiThreadedCoordinator
 import hu.bme.mit.theta.cfa.analysis.chc.coordinator.SimpleCoordinator
-import hu.bme.mit.theta.cfa.analysis.chc.learner.DecisionTreeLearner
-import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
-import hu.bme.mit.theta.cfa.analysis.chc.learner.RoundRobinLearner
-import hu.bme.mit.theta.cfa.analysis.chc.learner.SorcarLearner
+import hu.bme.mit.theta.cfa.analysis.chc.learner.*
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ClassificationError
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ImpurityMeasure
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
@@ -41,6 +38,10 @@ enum class StandaloneLearnerType : LearnerType {
 enum class LearnerCombination : LearnerType {
     RoundRobin {
         override fun create(learners: Collection<Learner>) = RoundRobinLearner(learners)
+    },
+
+    Fallback {
+        override fun create(learners: Collection<Learner>): Learner = FallbackLearner(learners)
     };
 
     abstract fun create(learners: Collection<Learner>): Learner
