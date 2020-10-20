@@ -163,6 +163,11 @@ private fun findPathsBetweenLoops(loops: List<CfaLoop>, initLoc: CFA.Loc, errorL
 fun cfaToChc(cfa: CFA): CHCSystem {
     val sccs = findSCCs(cfa.locs.toSet())
     val loops = findLoopsInSCCs(sccs)
-    val paths = findPathsBetweenLoops(loops, cfa.initLoc, cfa.errorLoc)
-    return CHCSystem.mergeAll(paths.map { it.toCHCSystem() })
+    if (cfa.errorLoc.isPresent) {
+        val paths = findPathsBetweenLoops(loops, cfa.initLoc, cfa.errorLoc.get())
+        return CHCSystem.mergeAll(paths.map { it.toCHCSystem() })
+    } else {
+        throw IllegalArgumentException("The CFA does not seem to have an error location. " +
+                "This tool can only check if an error location is reachable in a CFA.")
+    }
 }
