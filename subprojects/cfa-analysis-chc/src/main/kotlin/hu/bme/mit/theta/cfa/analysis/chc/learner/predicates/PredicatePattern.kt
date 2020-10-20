@@ -14,6 +14,6 @@ interface PredicatePattern {
 
     fun findAllSplits(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): PriorityQueue<Split>
     fun findBestSplit(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): Split? =
-            LeqPattern.findAllSplits(datapointsToSplit, constraintSystem, measure).peek()
+            findAllSplits(datapointsToSplit, constraintSystem, measure).peek()
 }
 
