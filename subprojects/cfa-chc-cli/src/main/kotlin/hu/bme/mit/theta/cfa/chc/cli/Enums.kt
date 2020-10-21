@@ -7,10 +7,7 @@ import hu.bme.mit.theta.cfa.analysis.chc.coordinator.SimpleCoordinator
 import hu.bme.mit.theta.cfa.analysis.chc.learner.*
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ClassificationError
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ImpurityMeasure
-import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.ListPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.ModulusPattern
-import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
+import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.*
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.Teacher
 import hu.bme.mit.theta.cfa.analysis.chc.utilities.getExprsOfSubType
 import hu.bme.mit.theta.core.type.Expr
@@ -81,7 +78,12 @@ enum class PredicatePatternType {
             val intExprs = getExprsOfSubType(Int(), chcs.chcs.map { it.body })
             return ModulusPattern(intExprs)
         }
-
+    },
+    IntBuilder {
+        override fun create(chcs: CHCSystem): PredicatePattern {
+            val intExprs = getExprsOfSubType(Int(), chcs.chcs.map { it.body })
+            return IntBuilderPattern(intExprs)
+        }
     };
 
     abstract fun create(chcs: CHCSystem): PredicatePattern
