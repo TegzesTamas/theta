@@ -21,6 +21,6 @@ class Arguments {
     @Parameter(names = ["--configfile", "-c"], description = "YAML file containing the configuration. Overrides other options.")
     var configFile: String? = null
 
-    @Parameter(description = "<model.cfa>", required = true)
+    @Parameter(names = ["--model"], description = "CFA model file to check", required = true)
     var cfaFile: String = ""
 }
