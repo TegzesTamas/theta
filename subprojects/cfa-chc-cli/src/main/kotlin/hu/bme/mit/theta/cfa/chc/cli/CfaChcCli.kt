@@ -20,57 +20,65 @@ object CfaChcCli {
     @JvmStatic
     fun main(args: Array<String>) {
         val arguments = Arguments()
-        val jCommander = JCommander.newBuilder()
-                .addObject(arguments)
-                .programName(JAR_NAME)
-                .acceptUnknownOptions(false)
-                .build()
         try {
-            jCommander.parse(*args)
-        } catch (e: ParameterException) {
-            println(e.message)
-            e.usage()
-            exitProcess(1)
-        }
-
-        if (arguments.help) {
-            jCommander.usage()
-            return
-        }
-
-        if (arguments.header) {
-            return //TODO
-        }
-
-        val cfaFile = arguments.cfaFile
-        val chcSystem = parseCfaToCHC(cfaFile)
-
-        val configFile = arguments.configFile
-        val solverFactory = Z3SolverFactory.getInstance()
-        val coordinator = if (configFile == null) {
-            val teacher = SimpleTeacher(solverFactory.createSolver())
-            val impurityMeasure = arguments.measure.create()
-            val patterns = arguments.predicatePatterns.map { it.create(chcSystem) }
-            val learners = arguments.learners.map { it.create(impurityMeasure, patterns) }
-            val learner = if (learners.size != 1) {
-                arguments.combination.create(learners)
-            } else {
-                learners[0]
+            val jCommander = JCommander.newBuilder()
+                    .addObject(arguments)
+                    .programName(JAR_NAME)
+                    .acceptUnknownOptions(false)
+                    .build()
+            try {
+                jCommander.parse(*args)
+            } catch (e: ParameterException) {
+                println(e.message)
+                e.usage()
+                exitProcess(1)
             }
-            SimpleCoordinator(teacher, learner)
-        } else {
-            val parser = YamlParser(chcSystem, solverFactory)
-            parser.createCoordinatorFromYaml(File(configFile))
-        }
+
+            if (arguments.help) {
+                jCommander.usage()
+                return
+            }
+
+            if (arguments.header) {
+                return //TODO
+            }
+
+            val cfaFile = arguments.cfaFile
+            val chcSystem = parseCfaToCHC(cfaFile)
+
+            val configFile = arguments.configFile
+            val solverFactory = Z3SolverFactory.getInstance()
+            val coordinator = if (configFile == null) {
+                val teacher = SimpleTeacher(solverFactory.createSolver())
+                val impurityMeasure = arguments.measure.create()
+                val patterns = arguments.predicatePatterns.map { it.create(chcSystem) }
+                val learners = arguments.learners.map { it.create(impurityMeasure, patterns) }
+                val learner = if (learners.size != 1) {
+                    arguments.combination.create(learners)
+                } else {
+                    learners[0]
+                }
+                SimpleCoordinator(teacher, learner)
+            } else {
+                val parser = YamlParser(chcSystem, solverFactory)
+                parser.createCoordinatorFromYaml(File(configFile))
+            }
 
 
-        try {
-            val candidates = coordinator.solveCHCSystem(chcSystem)
-            println("SAFE")
-            println(candidates)
-        } catch (e: ContradictoryException) {
-            println("UNSAFE")
-            println(e.contradictorySubset)
+            try {
+                val candidates = coordinator.solveCHCSystem(chcSystem)
+                println("SAFE")
+                println(candidates)
+            } catch (e: ContradictoryException) {
+                println("UNSAFE")
+                println(e.contradictorySubset)
+            }
+        } catch (e: Throwable) {
+            if (arguments.benchmark) {
+                println("${e.javaClass} -- ${e.message} -- ${e.stackTrace.toList()}")
+            } else {
+                e.printStackTrace()
+            }
         }
     }
 
