@@ -1,19 +1,53 @@
 coordinator: MultiThreaded
+#coordinator: Simple
 
 
 learners:
+  - type: Sorcar
+    predicatePatterns:
+      - IntLEQ
+      - Atoms
+      - Modulus
+      - IntBuilder
   - type: DecisionTree
     measure: CE
     predicatePatterns:
       - IntLEQ
       - Atoms
-  - type: Sorcar
-    predicatePatterns:
-      - Atoms
   - type: RoundRobin
     children:
-      - type: DecisionTree
       - type: Sorcar
-        asdf: hello
+        predicatePatterns:
+          - Atoms
+      - type: DecisionTree
+        measure: CE
+        predicatePatterns:
+          - IntLEQ
+      - type: DecisionTree
+        measure: CE
+        predicatePatterns:
+          - Modulus
+      - type: DecisionTree
+        measure: CE
+        predicatePatterns:
+          - IntBuilder
+      - type: DecisionTree
+        measure: CE
+        predicatePatterns:
+          - Atoms
+  - type: Fallback
+    children:
+      - type: Sorcar
+        predicatePatterns:
+          - Atoms
+      - type: DecisionTree
+        predicatePatterns:
+          - Atoms
+      - type: DecisionTree
+        predicatePatterns:
+          - IntLEQ
+          - Atoms
+          - Modulus
+          - IntBuilder
 
-teachers: 2
+teachers: 4
