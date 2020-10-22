@@ -23,4 +23,10 @@ class Arguments {
 
     @Parameter(names = ["--model"], description = "CFA model file to check", required = true)
     var cfaFile: String = ""
+
+    @Parameter(names = ["--benchmark"], description = "No effect")
+    var benchmark: Boolean = false
+
+    @Parameter(names = ["--header"], description = "No effect", help = true)
+    var header: Boolean = false
 }

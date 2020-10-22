@@ -37,6 +37,11 @@ object CfaChcCli {
             jCommander.usage()
             return
         }
+
+        if (arguments.header) {
+            return //TODO
+        }
+
         val cfaFile = arguments.cfaFile
         val chcSystem = parseCfaToCHC(cfaFile)
 
