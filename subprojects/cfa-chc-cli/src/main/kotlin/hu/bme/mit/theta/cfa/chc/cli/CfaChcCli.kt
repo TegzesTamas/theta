@@ -40,7 +40,8 @@ object CfaChcCli {
             }
 
             if (arguments.header) {
-                return //TODO
+                println("\"Result\",\"Invariants\",\"Contradictory constraints\"")
+                return
             }
 
             val cfaFile = arguments.cfaFile
@@ -67,15 +68,13 @@ object CfaChcCli {
 
             try {
                 val candidates = coordinator.solveCHCSystem(chcSystem)
-                println("SAFE")
-                println(candidates)
+                println("\"true\",\"$candidates\",")
             } catch (e: ContradictoryException) {
-                println("UNSAFE")
-                println(e.contradictorySubset)
+                println("\"false\",,\"${e.contradictorySubset}\"")
             }
         } catch (e: Throwable) {
             if (arguments.benchmark) {
-                println("${e.javaClass} -- ${e.message} -- ${e.stackTrace.toList()}")
+                println("\"[EX] ${e.javaClass.simpleName} : ${e.message}\",,")
             } else {
                 e.printStackTrace()
             }
