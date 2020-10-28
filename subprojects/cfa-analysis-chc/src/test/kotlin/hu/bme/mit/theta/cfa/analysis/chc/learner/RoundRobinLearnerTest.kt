@@ -15,7 +15,7 @@ internal class RoundRobinLearnerTest {
     fun singleCandidateTest() {
         val mockLearner = mock(Learner::class.java)
         val cs = ConstraintSystem.Builder().build()
-        `when`(mockLearner.suggestCandidates(cs)).thenReturn(CNFCandidates(listOf(), emptyMap()))
+        `when`(mockLearner.suggestCandidates(cs)).thenReturn(CNFCandidates("", listOf(), emptyMap()))
         val uut = RoundRobinLearner(listOf(mockLearner))
         uut.suggestCandidates(cs)
         uut.suggestCandidates(cs)
@@ -27,14 +27,14 @@ internal class RoundRobinLearnerTest {
         val mockLearner1 = mock(Learner::class.java)
         val mockLearner2 = mock(Learner::class.java)
         val cs = ConstraintSystem.Builder().build()
-        `when`(mockLearner1.suggestCandidates(cs)).thenReturn(CNFCandidates(listOf(), emptyMap()))
-        `when`(mockLearner2.suggestCandidates(cs)).thenReturn(GenericCandidates(False(), emptyMap()))
+        `when`(mockLearner1.suggestCandidates(cs)).thenReturn(CNFCandidates("", listOf(), emptyMap()))
+        `when`(mockLearner2.suggestCandidates(cs)).thenReturn(GenericCandidates("", False(), emptyMap()))
         val uut = RoundRobinLearner(listOf(mockLearner1, mockLearner2))
         repeat(7) {
             uut.suggestCandidates(cs)
         }
-        verify(mockLearner1,times(4)).suggestCandidates(cs)
-        verify(mockLearner2,times(3)).suggestCandidates(cs)
+        verify(mockLearner1, times(4)).suggestCandidates(cs)
+        verify(mockLearner2, times(3)).suggestCandidates(cs)
     }
 
     @Test
@@ -43,9 +43,9 @@ internal class RoundRobinLearnerTest {
         val mockLearner2 = mock(Learner::class.java)
         val mockLearner3 = mock(Learner::class.java)
         val cs = ConstraintSystem.Builder().build()
-        `when`(mockLearner1.suggestCandidates(cs)).thenReturn(CNFCandidates(listOf(), emptyMap()))
+        `when`(mockLearner1.suggestCandidates(cs)).thenReturn(CNFCandidates("", listOf(), emptyMap()))
         `when`(mockLearner2.suggestCandidates(cs)).thenThrow(Learner.CandidatesNotExpressibleException())
-        `when`(mockLearner3.suggestCandidates(cs)).thenReturn(CNFCandidates(listOf(), emptyMap()))
+        `when`(mockLearner3.suggestCandidates(cs)).thenReturn(CNFCandidates("", listOf(), emptyMap()))
         val uut = RoundRobinLearner(listOf(mockLearner1, mockLearner2, mockLearner3))
         repeat(7){
             uut.suggestCandidates(cs)
@@ -62,14 +62,14 @@ internal class RoundRobinLearnerTest {
         val mockLearner3 = mock(Learner::class.java)
         val cs = ConstraintSystem.Builder().build()
         `when`(mockLearner1.suggestCandidates(cs))
-                .thenReturn(CNFCandidates(listOf(), emptyMap()))
+                .thenReturn(CNFCandidates("", listOf(), emptyMap()))
                 .thenThrow(Learner.CandidatesNotExpressibleException())
         `when`(mockLearner2.suggestCandidates(cs))
-                .thenReturn(CNFCandidates(listOf(), emptyMap()))
+                .thenReturn(CNFCandidates("", listOf(), emptyMap()))
                 .thenThrow(Learner.CandidatesNotExpressibleException())
         `when`(mockLearner3.suggestCandidates(cs))
-                .thenReturn(CNFCandidates(listOf(), emptyMap()))
-                .thenReturn(CNFCandidates(listOf(), emptyMap()))
+                .thenReturn(CNFCandidates("", listOf(), emptyMap()))
+                .thenReturn(CNFCandidates("", listOf(), emptyMap()))
                 .thenThrow(Learner.CandidatesNotExpressibleException())
         val uut = RoundRobinLearner(listOf(mockLearner1, mockLearner2, mockLearner3))
         repeat(4){

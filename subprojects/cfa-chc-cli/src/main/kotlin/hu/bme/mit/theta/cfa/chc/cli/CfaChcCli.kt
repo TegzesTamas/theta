@@ -40,7 +40,7 @@ object CfaChcCli {
             }
 
             if (arguments.header) {
-                println("\"Result\",\"Invariants\",\"Contradictory constraints\"")
+                println("\"Result\",\"Invariants\",\"Contradictory constraints\",\"Learner name\"")
                 return
             }
 
@@ -53,7 +53,7 @@ object CfaChcCli {
                 val teacher = SimpleTeacher(solverFactory.createSolver())
                 val impurityMeasure = arguments.measure.create()
                 val patterns = arguments.predicatePatterns.map { it.create(chcSystem) }
-                val learners = arguments.learners.map { it.create(impurityMeasure, patterns) }
+                val learners = arguments.learners.map { it.create("", impurityMeasure, patterns) }
                 val learner = if (learners.size != 1) {
                     arguments.combination.create(learners)
                 } else {
@@ -68,7 +68,7 @@ object CfaChcCli {
 
             try {
                 val candidates = coordinator.solveCHCSystem(chcSystem)
-                println("\"true\",\"$candidates\",")
+                println("\"true\",\"$candidates\",,\"${candidates.learnerName}\"")
             } catch (e: ContradictoryException) {
                 println("\"false\",,\"${e.contradictorySubset}\"")
             }

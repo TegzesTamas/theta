@@ -1,5 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
+import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
@@ -12,10 +13,14 @@ import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import java.util.*
 
-class DecisionTreeLearner(private val measure: ImpurityMeasure = ClassificationError,
+class DecisionTreeLearner(val name: String,
+                          private val measure: ImpurityMeasure = ClassificationError,
                           private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
 
-    override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates = DecisionTreeBuilder(constraintSystem).buildTree().candidates
+    override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates {
+        val invariantMap = DecisionTreeBuilder(constraintSystem).buildTree().candidates
+        return CNFCandidates(name, invariantMap.default, invariantMap.candidateMap)
+    }
 
 
     inner class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
@@ -192,7 +197,10 @@ class DecisionTreeLearner(private val measure: ImpurityMeasure = ClassificationE
         }
     }
 
-    private data class SetToProcess(val wholeDatapoints: MutableSet<Datapoint>, val splitDatapoints: MutableSet<Datapoint>, var parentSlot: ParentSlot?) : BuildNode {
+    private data class SetToProcess(
+
+            val wholeDatapoints: MutableSet<Datapoint>,
+            val splitDatapoints: MutableSet<Datapoint>, var parentSlot: ParentSlot?) : BuildNode {
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
 
         override val built: DecisionTree.Node?

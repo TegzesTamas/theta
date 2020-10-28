@@ -51,6 +51,10 @@ class YamlParser(private val chcs: CHCSystem,
         if (yaml == null) {
             throw YamlException("Learners must be given as mappings.")
         }
+        val name = yaml.parseChildOrDefault<String>("name", "") { node ->
+            node.asStringOrNull() ?: throw YamlException("'learner.name' must be a string")
+        }
+
         val learnerType = yaml.parseChildOrDefault<LearnerType>("type", StandaloneLearnerType.DecisionTree) { node ->
             val typeString = node.asStringOrNull()
             if (typeString != null) {
@@ -107,6 +111,7 @@ class YamlParser(private val chcs: CHCSystem,
             emptyList()
         }
         return learnerType.create(
+                name,
                 children,
                 measureType.create(),
                 patterns.map { it.create(chcs) }

@@ -13,7 +13,7 @@ class FallbackLearnerTest {
     @Test
     fun simpleTest() {
         val mockLearner = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(True(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", True(), emptyMap())
         }
 
         val dut = FallbackLearner(listOf(mockLearner))
@@ -28,11 +28,11 @@ class FallbackLearnerTest {
     fun fallbackTest() {
         val failingLearner = mock<Learner> {
             on { suggestCandidates(any()) }
-                    .doReturn(GenericCandidates(True(), emptyMap()))
+                    .doReturn(GenericCandidates("", True(), emptyMap()))
                     .doThrow(Learner.CandidatesNotExpressibleException())
         }
         val goodLearner = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(True(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", True(), emptyMap())
         }
 
         val dut = FallbackLearner(listOf(failingLearner, goodLearner))

@@ -16,24 +16,28 @@ import hu.bme.mit.theta.core.type.inttype.IntExprs.Int
 import hu.bme.mit.theta.core.utils.ExprUtils
 
 interface LearnerType {
-    fun create(learners: Collection<Learner>, measure: ImpurityMeasure, patterns: Collection<PredicatePattern>): Learner
+    fun create(name: String, learners: Collection<Learner>, measure: ImpurityMeasure, patterns: Collection<PredicatePattern>): Learner
 }
 
 enum class StandaloneLearnerType : LearnerType {
 
     Sorcar {
-        override fun create(measure: ImpurityMeasure, patterns: Collection<PredicatePattern>) = SorcarLearner(patterns)
+        override fun create(name: String, measure: ImpurityMeasure, patterns: Collection<PredicatePattern>) = SorcarLearner(name, patterns)
     },
     DecisionTree {
-        override fun create(measure: ImpurityMeasure,
-                            patterns: Collection<PredicatePattern>) = DecisionTreeLearner(measure = measure, predicatePatterns = patterns)
+        override fun create(name: String,
+                            measure: ImpurityMeasure,
+                            patterns: Collection<PredicatePattern>) = DecisionTreeLearner(name, measure, patterns)
     };
 
 
-    abstract fun create(measure: ImpurityMeasure, patterns: Collection<PredicatePattern>): Learner
-    override fun create(learners: Collection<Learner>,
+    abstract fun create(name: String,
+                        measure: ImpurityMeasure, patterns: Collection<PredicatePattern>): Learner
+
+    override fun create(name: String,
+                        learners: Collection<Learner>,
                         measure: ImpurityMeasure,
-                        patterns: Collection<PredicatePattern>) = create(measure, patterns)
+                        patterns: Collection<PredicatePattern>) = create(name, measure, patterns)
 }
 
 enum class LearnerCombination : LearnerType {
@@ -46,7 +50,8 @@ enum class LearnerCombination : LearnerType {
     };
 
     abstract fun create(learners: Collection<Learner>): Learner
-    override fun create(learners: Collection<Learner>,
+    override fun create(name: String,
+                        learners: Collection<Learner>,
                         measure: ImpurityMeasure,
                         patterns: Collection<PredicatePattern>): Learner = create(learners)
 }

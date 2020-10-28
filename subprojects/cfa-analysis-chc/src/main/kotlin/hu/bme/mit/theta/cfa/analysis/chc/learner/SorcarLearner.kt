@@ -12,8 +12,8 @@ import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolType
 
-class SorcarLearner(private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
-    constructor(pattern: PredicatePattern) : this(listOf(pattern))
+class SorcarLearner(val name: String, private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
+    constructor(name: String, pattern: PredicatePattern) : this(name, listOf(pattern))
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): CNFCandidates {
         val atoms = predicatePatterns.flatMap { it.findAllSplits(constraintSystem.datapoints, constraintSystem, NullError) }
@@ -54,7 +54,7 @@ class SorcarLearner(private val predicatePatterns: Collection<PredicatePattern> 
             }
             curCS = builder.build()
         } while (!consistent)
-        return CNFCandidates(listOf(), candidates.mapValues { listOf(And(it.value)) })
+        return CNFCandidates(name, listOf(), candidates.mapValues { listOf(And(it.value)) })
     }
 
     private fun isRelevant(atom: Expr<BoolType>, invariant: Invariant, constraintSystem: ConstraintSystem) =

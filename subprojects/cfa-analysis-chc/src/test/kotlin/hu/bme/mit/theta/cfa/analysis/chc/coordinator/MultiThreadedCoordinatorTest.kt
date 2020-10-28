@@ -7,15 +7,15 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.Teacher
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.False
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.True
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Assert.*
 
 class MultiThreadedCoordinatorTest {
 
     @Test
     fun simpleTest() {
         val mockLearner = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(True(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", True(), emptyMap())
         }
         val mockTeacher = mock<Teacher> {
             on { checkCandidates(any(), any()) } doReturn null
@@ -33,10 +33,10 @@ class MultiThreadedCoordinatorTest {
     @Test
     fun multipleTeachersMultipleLearnersTest() {
         val mockLearner1 = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(True(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", True(), emptyMap())
         }
         val mockLearner2 = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(False(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", False(), emptyMap())
         }
         val mockTeacher1 = mock<Teacher> {
             on { checkCandidates(any(), any()) } doReturn emptyList() doReturn null
@@ -69,7 +69,7 @@ class MultiThreadedCoordinatorTest {
             on { suggestCandidates(any()) } doThrow Learner.CandidatesNotExpressibleException()
         }
         val mockLearner2 = mock<Learner> {
-            on { suggestCandidates(any()) } doReturn GenericCandidates(False(), emptyMap())
+            on { suggestCandidates(any()) } doReturn GenericCandidates("", False(), emptyMap())
         }
         val mockTeacher1 = mock<Teacher> {
             on { checkCandidates(any(), any()) } doReturn emptyList() doReturn null

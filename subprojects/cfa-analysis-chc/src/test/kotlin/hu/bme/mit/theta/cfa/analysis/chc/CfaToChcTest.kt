@@ -39,7 +39,7 @@ class CfaToChcTest {
 
         val solver = Z3SolverFactory.getInstance().createSolver()
         solver.push()
-        solver.addCHC(chcs.first(), GenericCandidates(True(), emptyMap()))
+        solver.addCHC(chcs.first(), GenericCandidates("", True(), emptyMap()))
         Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: ${chcs.first()}", SolverStatus.UNSAT, solver.check())
         solver.pop()
     }
@@ -75,7 +75,7 @@ class CfaToChcTest {
         val solver = Z3SolverFactory.getInstance().createSolver()
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, GenericCandidates(True(), emptyMap()))
+            solver.addCHC(chc, GenericCandidates("", True(), emptyMap()))
             Assert.assertEquals("CHC should be unsatisfiable, but it is satisfiable: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -114,7 +114,7 @@ class CfaToChcTest {
         var unsatCount = 0
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, GenericCandidates(True(), emptyMap()))
+            solver.addCHC(chc, GenericCandidates("", True(), emptyMap()))
             when (solver.check()) {
                 SolverStatus.SAT -> ++satCount
                 SolverStatus.UNSAT -> ++unsatCount
@@ -159,7 +159,7 @@ class CfaToChcTest {
         val invariantExpr = IntExprs.Eq(x.ref, IntExprs.Int(0))
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, GenericCandidates(invariantExpr, emptyMap()))
+            solver.addCHC(chc, GenericCandidates("", invariantExpr, emptyMap()))
             Assert.assertEquals("CHC satisfiable with bound invariant that should prove safety", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
@@ -212,7 +212,7 @@ class CfaToChcTest {
         val solver = Z3SolverFactory.getInstance().createSolver()
         for (chc in chcs) {
             solver.push()
-            solver.addCHC(chc, GenericCandidates(True(), candidates))
+            solver.addCHC(chc, GenericCandidates("", True(), candidates))
             Assert.assertEquals("Simple CHC check error: $chc", SolverStatus.UNSAT, solver.check())
             solver.pop()
         }
