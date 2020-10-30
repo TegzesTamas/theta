@@ -13,7 +13,7 @@ import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import java.util.*
 
-class DecisionTreeLearner(val name: String,
+class DecisionTreeLearner(override val name: String,
                           private val measure: ImpurityMeasure = ClassificationError,
                           private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
 

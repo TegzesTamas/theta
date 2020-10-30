@@ -7,13 +7,14 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.Learner.CandidatesNotExpressibl
 class RoundRobinLearner(learners: Iterable<Learner>) : Learner {
     private val learners = learners.toMutableList()
     private var index = 0
+    override val name = this.learners.joinToString(prefix = "RoundRobinLearner(", postfix = ")") { it.name }
 
     @Throws(CandidatesNotExpressibleException::class)
     override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates {
         var candidates: InvariantCandidates? = null
         while (candidates == null) {
             if (learners.isEmpty()) {
-                throw CandidatesNotExpressibleException()
+                throw CandidatesNotExpressibleException("$name cannot provide candidates satisfying the constraints ")
             }
             if (index >= learners.size) {
                 index = 0

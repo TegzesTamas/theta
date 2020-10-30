@@ -6,6 +6,7 @@ import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 class FallbackLearner(learners: Iterable<Learner>) : Learner {
 
     private val learners = learners.toMutableList()
+    override val name = this.learners.joinToString(prefix = "FallbackLearner(", postfix = ")") { it.name }
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates {
         while (learners.isNotEmpty()) {
@@ -16,6 +17,6 @@ class FallbackLearner(learners: Iterable<Learner>) : Learner {
             }
         }
         throw Learner.CandidatesNotExpressibleException(
-                "None of the learners could provide candidates satisfying the constraints")
+                "$name cannot provide candidates satisfying the constraints")
     }
 }

@@ -21,7 +21,6 @@ class FallbackLearnerTest {
         dut.suggestCandidates(ConstraintSystem.Builder().build())
 
         verify(mockLearner).suggestCandidates(any())
-        verifyNoMoreInteractions(mockLearner)
     }
 
     @Test
@@ -43,7 +42,6 @@ class FallbackLearnerTest {
 
         verify(failingLearner, times(2)).suggestCandidates(any())
         verify(goodLearner, times(2)).suggestCandidates(any())
-        verifyNoMoreInteractions(failingLearner, goodLearner)
     }
 
     @Test
@@ -61,7 +59,6 @@ class FallbackLearnerTest {
         } catch (e: Learner.CandidatesNotExpressibleException) {
             for (learner in learners) {
                 verify(learner, times(1)).suggestCandidates(any())
-                verifyNoMoreInteractions(learner)
             }
             return
         }

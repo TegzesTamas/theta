@@ -12,7 +12,9 @@ import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.And
 import hu.bme.mit.theta.core.type.booltype.BoolType
 
-class SorcarLearner(val name: String, private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
+class SorcarLearner(override val name: String,
+                    private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)
+) : Learner {
     constructor(name: String, pattern: PredicatePattern) : this(name, listOf(pattern))
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): CNFCandidates {
