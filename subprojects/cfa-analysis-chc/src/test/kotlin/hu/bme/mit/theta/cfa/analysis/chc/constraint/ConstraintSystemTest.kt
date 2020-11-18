@@ -35,6 +35,12 @@ class ConstraintSystemTest {
                 subsets[dp]?.any { forcedFalse.contains(it) } ?: false)
     }
 
+    private fun ConstraintSystem.assertSubsetListsUnique() {
+        for (value in subsets.values) {
+            assertTrue(value.toSet().size == value.size)
+        }
+    }
+
     @Test(expected = ContradictoryException::class)
     fun contradictoryBySimpleDeductionTest() {
         val dpA = Datapoint(Invariant("A"), MutableValuation())
@@ -58,6 +64,7 @@ class ConstraintSystemTest {
         constraintSystem.assertUniversallyTrue(dpA)
         constraintSystem.assertUniversallyTrue(dpB)
         constraintSystem.assertUniversallyFalse(dpC)
+        constraintSystem.assertSubsetListsUnique()
     }
 
     @Test(expected = ContradictoryException::class)
@@ -90,6 +97,7 @@ class ConstraintSystemTest {
         builder.addConstraint(Constraint(dpD, null, DummyCHC.unchanging))
         val constraintSystem = builder.build()
         constraintSystem.assertValid()
+        constraintSystem.assertSubsetListsUnique()
         constraintSystem.assertUniversallyTrue(dpA)
         constraintSystem.assertExistentiallyTrue(dpB)
         constraintSystem.assertExistentiallyTrue(dpC)
@@ -136,4 +144,38 @@ class ConstraintSystemTest {
                 .build()
     }
 
+    @Test
+    fun nonUniqueSubsetTest(){
+        val x = DeclManager.getVar("x", Int())
+        val y = DeclManager.getVar("y", Int())
+        val z = DeclManager.getVar("z", Int())
+
+        val inv = Invariant("A")
+
+        val valA = MutableValuation().apply {
+            put(x, Int(1))
+            put(y, Int(1))
+            put(z, Int(1))
+        }
+        val dpA = Datapoint(inv, valA)
+        val valB = MutableValuation().apply {
+            put(x, Int(1))
+            put(y, Int(1))
+        }
+        val dpB = Datapoint(inv, valB)
+        val valC = MutableValuation().apply {
+            put(x, Int(1))
+        }
+        val dpC = Datapoint(inv, valC)
+        val valD = MutableValuation()
+        val dpD = Datapoint(inv, valD)
+
+        val constraintSystem = ConstraintSystem.Builder()
+                .addDatapoints(listOf(dpA))
+                .addDatapoints(listOf(dpB))
+                .addDatapoints(listOf(dpC))
+                .addDatapoints(listOf(dpD))
+                .build()
+        constraintSystem.assertSubsetListsUnique()
+    }
 }

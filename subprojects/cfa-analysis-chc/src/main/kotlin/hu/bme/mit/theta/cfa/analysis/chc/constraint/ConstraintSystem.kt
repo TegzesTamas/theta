@@ -203,7 +203,6 @@ class ConstraintSystem private constructor(
                             when {
                                 oldDp.subsetOf(newDp) -> {
                                     newList.add(oldDp)
-                                    newList.addAll(oldList)
                                 }
                                 newDp.subsetOf(oldDp) -> {
                                     oldList.add(newDp)
