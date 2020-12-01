@@ -223,6 +223,6 @@ class DecisionTreeLearner(override val name: String,
 
 
     private class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode {
-        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? = built.label
+        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean = built.label
     }
 }
