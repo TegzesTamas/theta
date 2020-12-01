@@ -86,19 +86,19 @@ class DecisionTreeLearner(override val name: String,
             }
 
             if (wholeDatapoints.none { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.none { constraintSystem.forcedFalse.contains(it) }) {
-                tryToExecuteLabeling(wholeDatapoints, true)?.let {
+                tryToExecuteLabeling(wholeDatapoints, splitDatapoints, true)?.let {
                     return it
                 }
             }
             if (wholeDatapoints.none { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.none { constraintSystem.forcedTrue.contains(it) }) {
-                tryToExecuteLabeling(wholeDatapoints, false)?.let {
+                tryToExecuteLabeling(wholeDatapoints, splitDatapoints, false)?.let {
                     return it
                 }
             }
             return null
         }
 
-        private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, label: Boolean): DecisionTree.Leaf? {
+        private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, splitDatapoints: Set<Datapoint>, label: Boolean): DecisionTree.Leaf? {
             val allNewDatapoints = mutableListOf<Pair<Datapoint, Boolean?>>()
             try {
                 val builder = constraintSystem.builder()
@@ -113,7 +113,12 @@ class DecisionTreeLearner(override val name: String,
                     builder.labelDatapointsFalse(newDatapoints.filter { it.second == false }.map { it.first })
                 } while (newDatapoints.isNotEmpty())
                 assert(allNewDatapoints.toSet().size == allNewDatapoints.size)
-                constraintSystem = builder.build()
+                val newCS = builder.build()
+                when (label) {
+                    true -> if (splitDatapoints.any { it in newCS.forcedFalse }) return null
+                    false -> if (splitDatapoints.any { it in newCS.forcedTrue }) return null
+                }
+                constraintSystem = newCS
                 return DecisionTree.Leaf(label)
             } catch (e: ContradictoryException) {
                 val builder = constraintSystem.builder()
