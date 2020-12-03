@@ -56,16 +56,10 @@ data class CHCSystem(val facts: List<Fact> = emptyList(),
 
     companion object {
         fun mergeAll(systems: Iterable<CHCSystem>): CHCSystem {
-            val facts = ArrayList<Fact>()
-            val inductiveClauses = ArrayList<InductiveClause>()
-            val queries = ArrayList<Query>()
-            val simpleCHCs = ArrayList<SimpleCHC>()
-            for (system in systems) {
-                facts += system.facts
-                inductiveClauses += system.inductiveClauses
-                queries += system.queries
-                simpleCHCs += system.simpleCHCs
-            }
+            val facts = systems.flatMap { it.facts }
+            val inductiveClauses = systems.flatMap { it.inductiveClauses }
+            val queries = systems.flatMap { it.queries }
+            val simpleCHCs = systems.flatMap { it.simpleCHCs }
             return CHCSystem(facts, inductiveClauses, queries, simpleCHCs)
         }
     }
