@@ -17,4 +17,6 @@ object Deps {
     }
 	
 	val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:${Versions.mockitoKotlin}"
+
+    val eoyaml = "com.amihaiemil.web:eo-yaml:${Versions.eoYaml}"
 }
