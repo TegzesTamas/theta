@@ -103,13 +103,6 @@ class YamlParser(private val chcs: CHCSystem,
                 parseLearner(it.asMappingOrNull())
             } ?: throw YamlException("'learner.children' must be a sequence.")
         }
-        if (yaml.containsKey("children")) {
-            yaml.yamlSequence("children")
-                    ?.map { parseLearner(it.asMapping()) }
-                    ?: throw YamlException("")
-        } else {
-            emptyList()
-        }
         return learnerType.create(
                 name,
                 children,
