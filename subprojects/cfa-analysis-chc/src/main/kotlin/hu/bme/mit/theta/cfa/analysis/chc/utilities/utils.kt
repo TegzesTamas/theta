@@ -13,7 +13,7 @@ fun <T : Type> removePrimes(expr: Expr<T>): Expr<T> {
     }
 }
 
-fun <T : Type> getExprsOfSubType(type: T, exprs: Iterable<Expr<*>>): List<Expr<T>> {
+fun <T : Type> getSubexprsOfType(type: T, exprs: Iterable<Expr<*>>): List<Expr<T>> {
     val destination = mutableListOf<Expr<T>>()
     collectSubexprsOfType(type, exprs, destination)
     return destination

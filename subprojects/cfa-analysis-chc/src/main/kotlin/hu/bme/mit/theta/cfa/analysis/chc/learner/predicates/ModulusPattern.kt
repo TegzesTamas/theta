@@ -1,15 +1,14 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner.predicates
 
+import hu.bme.mit.theta.cfa.analysis.chc.utilities.getSubexprsOfType
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs.Or
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.type.inttype.IntExprs.*
-import hu.bme.mit.theta.core.type.inttype.IntType
 
-class ModulusPattern(intExprs: Iterable<Expr<IntType>>) : ExprPattern() {
-    override val atoms: List<Expr<BoolType>>
-
-    init {
+class ModulusPattern(private val seedExprs: Iterable<Expr<*>>) : ExprPattern() {
+    override val atoms: List<Expr<BoolType>> by lazy {
+        val intExprs = getSubexprsOfType(Int(), seedExprs)
         val exprs = mutableListOf<Expr<BoolType>>()
 
         for (a in intExprs) {
@@ -17,11 +16,10 @@ class ModulusPattern(intExprs: Iterable<Expr<IntType>>) : ExprPattern() {
                 for (c in intExprs) {
                     // c <= 0 || a == (b mod c)
                     exprs.add(Or(Leq(c, Int(0)),
-                            Eq(a, Mod(b, c))))
+                        Eq(a, Mod(b, c))))
                 }
             }
         }
-
-        atoms = exprs
+        return@lazy exprs
     }
 }

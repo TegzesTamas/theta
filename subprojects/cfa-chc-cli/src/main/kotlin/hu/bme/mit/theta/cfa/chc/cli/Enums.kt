@@ -9,7 +9,6 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ClassificationErro
 import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.ImpurityMeasure
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.*
 import hu.bme.mit.theta.cfa.analysis.chc.teacher.Teacher
-import hu.bme.mit.theta.cfa.analysis.chc.utilities.getExprsOfSubType
 import hu.bme.mit.theta.core.type.Expr
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import hu.bme.mit.theta.core.type.inttype.IntExprs.Int
@@ -84,14 +83,12 @@ enum class PredicatePatternType {
     },
     Modulus {
         override fun create(chcs: CHCSystem): PredicatePattern {
-            val intExprs = getExprsOfSubType(Int(), chcs.chcs.map { it.body })
-            return ModulusPattern(intExprs)
+            return ModulusPattern(chcs.chcs.map { it.body })
         }
     },
     IntBuilder {
         override fun create(chcs: CHCSystem): PredicatePattern {
-            val intExprs = getExprsOfSubType(Int(), chcs.chcs.map { it.body })
-            return IntBuilderPattern(intExprs)
+            return IntBuilderPattern(chcs.chcs.map { it.body })
         }
     };
 
