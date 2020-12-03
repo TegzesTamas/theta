@@ -3,62 +3,75 @@ coordinator: MultiThreaded
 
 
 learners:
-  - type: Sorcar
+  -
+    type: Sorcar
     name: Arthur
     predicatePatterns:
       - IntLEQ
       - Atoms
       - Modulus
       - IntBuilder
-  - type: DecisionTree
+  -
+    type: DecisionTree
     name: John
     measure: CE
     predicatePatterns:
       - IntLEQ
       - Atoms
-  - type: RoundRobin
+  -
+    type: RoundRobin
     children:
-      - type: Sorcar
+      -
+        type: Sorcar
         name: Alice
         predicatePatterns:
           - Atoms
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Bob
         measure: CE
         predicatePatterns:
           - IntLEQ
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Charlie
         measure: CE
         predicatePatterns:
           - Modulus
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Dave
         measure: CE
         predicatePatterns:
           - IntBuilder
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Eve
         measure: CE
         predicatePatterns:
           - Atoms
-  - type: Fallback
+  -
+    type: Fallback
     children:
-      - type: Sorcar
+      -
+        type: Sorcar
         name: Frank
         predicatePatterns:
           - Atoms
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Gill
         predicatePatterns:
           - Atoms
-      - type: DecisionTree
+      -
+        type: DecisionTree
         name: Heidi
         predicatePatterns:
           - IntLEQ
           - Atoms
           - Modulus
           - IntBuilder
-  - type: Simple
+  -
+    type: Simple
     name: Ian
 teachers: 4
