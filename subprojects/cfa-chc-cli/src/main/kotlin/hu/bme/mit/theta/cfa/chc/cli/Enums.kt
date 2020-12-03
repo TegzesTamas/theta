@@ -21,6 +21,10 @@ interface LearnerType {
 
 enum class StandaloneLearnerType : LearnerType {
 
+    Simple {
+        override fun create(name: String, measure: ImpurityMeasure, patterns: Collection<PredicatePattern>): Learner = SimpleLearner(name)
+    },
+
     Sorcar {
         override fun create(name: String, measure: ImpurityMeasure, patterns: Collection<PredicatePattern>) = SorcarLearner(name, patterns)
     },

@@ -59,5 +59,6 @@ learners:
           - Atoms
           - Modulus
           - IntBuilder
-
+  - type: Simple
+    name: Ian
 teachers: 4
