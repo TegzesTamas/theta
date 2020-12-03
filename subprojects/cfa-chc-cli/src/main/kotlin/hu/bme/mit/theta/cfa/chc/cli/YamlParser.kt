@@ -51,7 +51,7 @@ class YamlParser(private val chcs: CHCSystem,
         if (yaml == null) {
             throw YamlException("Learners must be given as mappings.")
         }
-        val name = yaml.parseChildOrDefault<String>("name", "") { node ->
+        val name = yaml.parseChildOrDefault("name", "") { node ->
             node.asStringOrNull() ?: throw YamlException("'learner.name' must be a string")
         }
 

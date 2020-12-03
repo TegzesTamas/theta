@@ -194,7 +194,7 @@ class DummyCHC(vararg changedVariables: VarDecl<*>) : CHC {
 
     override fun solverExpr(candidates: InvariantCandidates): Expr<BoolType> = BoolExprs.True()
 
-    override fun append(query: Query): CHC? = query
+    override fun append(query: Query): CHC = query
 
     override fun datapoints(model: Valuation): Pair<Datapoint?, Datapoint?> = null to null
     override fun toString(): String = "DummyCHC"
