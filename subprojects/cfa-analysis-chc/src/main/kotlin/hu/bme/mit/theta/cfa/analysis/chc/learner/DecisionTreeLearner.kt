@@ -2,6 +2,7 @@ package hu.bme.mit.theta.cfa.analysis.chc.learner
 
 import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
+import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
@@ -10,6 +11,8 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.*
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
 import hu.bme.mit.theta.core.type.Expr
+import hu.bme.mit.theta.core.type.booltype.AndExpr
+import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import java.util.*
 
@@ -18,14 +21,14 @@ class DecisionTreeLearner(override val name: String,
                           private val predicatePatterns: Collection<PredicatePattern> = listOf(LeqPattern)) : Learner {
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates {
-        val invariantMap = DecisionTreeBuilder(constraintSystem).buildTree().candidates
+        val invariantMap = DecisionTreeBuilder(constraintSystem).buildTree()
         return CNFCandidates(name, invariantMap.default, invariantMap.candidateMap)
     }
 
 
-    inner class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
+    private inner class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
         private lateinit var root: BuildNode
-        fun buildTree(): DecisionTree {
+        fun buildTree(): CNFInvariantMap {
             val toProcess = LinkedList(Collections.singleton(SetToProcess(constraintSystem.datapoints.toMutableSet(), mutableSetOf(), null)))
             do {
                 val (wholeDatapoints, splitDatapoints, parentSlot) = toProcess.removeFirst()
@@ -74,31 +77,35 @@ class DecisionTreeLearner(override val name: String,
                     }
                 }
             } while (toProcess.isNotEmpty())
-            return DecisionTree(root.built!!)
+            return root.invariantMap!!
         }
 
-        private fun tryToLabel(wholeDatapoints: Set<Datapoint>, splitDatapoints: Set<Datapoint>): DecisionTree.Leaf? {
+        private fun tryToLabel(wholeDatapoints: Set<Datapoint>, splitDatapoints: Set<Datapoint>): Boolean? {
             if (wholeDatapoints.all { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.all { constraintSystem.forcedTrue.contains(it) }) {
-                return DecisionTree.Leaf(true)
+                return true
             }
             if (wholeDatapoints.all { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.all { constraintSystem.forcedFalse.contains(it) }) {
-                return DecisionTree.Leaf(false)
+                return false
             }
 
             if (wholeDatapoints.none { constraintSystem.forcedFalse.contains(it) } && splitDatapoints.none { constraintSystem.forcedFalse.contains(it) }) {
-                tryToExecuteLabeling(wholeDatapoints, splitDatapoints, true)?.let {
-                    return it
+                if (checkLabellingConsistency(wholeDatapoints, splitDatapoints, true)) {
+                    return true
                 }
             }
             if (wholeDatapoints.none { constraintSystem.forcedTrue.contains(it) } && splitDatapoints.none { constraintSystem.forcedTrue.contains(it) }) {
-                tryToExecuteLabeling(wholeDatapoints, splitDatapoints, false)?.let {
-                    return it
+                if (checkLabellingConsistency(wholeDatapoints, splitDatapoints, false)) {
+                    return false
                 }
             }
             return null
         }
 
-        private fun tryToExecuteLabeling(wholeDatapoints: Set<Datapoint>, splitDatapoints: Set<Datapoint>, label: Boolean): DecisionTree.Leaf? {
+        private fun checkLabellingConsistency(
+            wholeDatapoints: Set<Datapoint>,
+            splitDatapoints: Set<Datapoint>,
+            label: Boolean
+        ): Boolean {
             val allNewDatapoints = mutableListOf<Pair<Datapoint, Boolean?>>()
             try {
                 val builder = constraintSystem.builder()
@@ -115,11 +122,11 @@ class DecisionTreeLearner(override val name: String,
                 assert(allNewDatapoints.toSet().size == allNewDatapoints.size)
                 val newCS = builder.build()
                 when (label) {
-                    true -> if (splitDatapoints.any { it in newCS.forcedFalse }) return null
-                    false -> if (splitDatapoints.any { it in newCS.forcedTrue }) return null
+                    true -> if (splitDatapoints.any { it in newCS.forcedFalse }) return false
+                    false -> if (splitDatapoints.any { it in newCS.forcedTrue }) return false
                 }
                 constraintSystem = newCS
-                return DecisionTree.Leaf(label)
+                return true
             } catch (e: ContradictoryException) {
                 val builder = constraintSystem.builder()
                 builder.addDatapoints(allNewDatapoints.map { it.first })
@@ -131,7 +138,7 @@ class DecisionTreeLearner(override val name: String,
                     newDatapoints = builder.getAndResetNewDatapoints().map { it to classifyNewDatapoint(it) }
                 }
                 constraintSystem = builder.build()
-                return null
+                return false
             }
 
         }
@@ -172,14 +179,22 @@ class DecisionTreeLearner(override val name: String,
 
 
     private interface BuildNode {
-        val built: DecisionTree.Node?
+        val invariantMap: CNFInvariantMap?
         fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean?
     }
 
-    private class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) : BuildNode {
-        override val built: DecisionTree.Branch?
+    private class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) :
+        BuildNode {
+
+        override val invariantMap: CNFInvariantMap?
             get() {
-                return DecisionTree.Branch(pivot, trueChild.built ?: return null, falseChild.built ?: return null)
+                val trueMap = trueChild.invariantMap
+                val falseMap = falseChild.invariantMap
+                return if (trueMap != null && falseMap != null) {
+                    pivot.transformCandidates(trueMap, falseMap)
+                } else {
+                    null
+                }
             }
 
         override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? {
@@ -203,12 +218,12 @@ class DecisionTreeLearner(override val name: String,
     }
 
     private data class SetToProcess(
-
-            val wholeDatapoints: MutableSet<Datapoint>,
-            val splitDatapoints: MutableSet<Datapoint>, var parentSlot: ParentSlot?) : BuildNode {
+        val wholeDatapoints: MutableSet<Datapoint>,
+        val splitDatapoints: MutableSet<Datapoint>, var parentSlot: ParentSlot?
+    ) : BuildNode {
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
 
-        override val built: DecisionTree.Node?
+        override val invariantMap: CNFInvariantMap?
             get() = null
 
         override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? {
@@ -222,7 +237,14 @@ class DecisionTreeLearner(override val name: String,
     }
 
 
-    private class LeafBuildNode(override val built: DecisionTree.Leaf) : BuildNode {
-        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean = built.label
+    private class LeafBuildNode(val label: Boolean) : BuildNode {
+        override val invariantMap: CNFInvariantMap
+            get() =
+                if (label)
+                    CNFInvariantMap(listOf(BoolExprs.And(listOf(BoolExprs.True()))), emptyMap())
+                else
+                    CNFInvariantMap(emptyList(), emptyMap())
+
+        override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean = label
     }
 }
