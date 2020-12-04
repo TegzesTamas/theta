@@ -15,7 +15,7 @@ data class GenericCandidates(override val learnerName: String, val default: Expr
     override fun get(invariant: Invariant): Expr<BoolType> = candidateMap[invariant] ?: default
 }
 
-data class CNFCandidates(override val learnerName: String, val default: List<AndExpr>, val candidateMap: Map<Invariant, List<AndExpr>>) : InvariantCandidates {
+data class DNFCandidates(override val learnerName: String, val default: List<AndExpr>, val candidateMap: Map<Invariant, List<AndExpr>>) : InvariantCandidates {
     fun getOperators(invariant: Invariant): List<AndExpr> = candidateMap[invariant] ?: default
     override operator fun get(invariant: Invariant): OrExpr = Or(this.getOperators(invariant))
 }

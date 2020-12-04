@@ -16,13 +16,13 @@ import hu.bme.mit.theta.core.type.booltype.NotExpr
 interface Decision {
     fun datapointCanBeTrue(datapoint: Datapoint): Boolean
     fun datapointCanBeFalse(datapoint: Datapoint): Boolean
-    fun transformCandidates(ifTrue: CNFInvariantMap, ifFalse: CNFInvariantMap): CNFInvariantMap
+    fun transformCandidates(ifTrue: DNFInvariantMap, ifFalse: DNFInvariantMap): DNFInvariantMap
 }
 
 data class InvariantDecision(val matching: Set<Invariant>) : Decision {
     override fun datapointCanBeTrue(datapoint: Datapoint) = datapoint.invariant in matching
     override fun datapointCanBeFalse(datapoint: Datapoint): Boolean = !datapointCanBeTrue(datapoint)
-    override fun transformCandidates(ifTrue: CNFInvariantMap, ifFalse: CNFInvariantMap): CNFInvariantMap {
+    override fun transformCandidates(ifTrue: DNFInvariantMap, ifFalse: DNFInvariantMap): DNFInvariantMap {
         val invariants = matching.toMutableSet()
         val candidateMap = mutableMapOf<Invariant, List<AndExpr>>()
         invariants += ifTrue.candidateMap.keys
@@ -34,14 +34,14 @@ data class InvariantDecision(val matching: Set<Invariant>) : Decision {
                 candidateMap[invariant] = ifFalse.getOperators(invariant)
             }
         }
-        return CNFInvariantMap(ifFalse.default, candidateMap)
+        return DNFInvariantMap(ifFalse.default, candidateMap)
     }
 }
 
 abstract class LogicDecision : Decision {
     protected abstract val trueExpr: Expr<BoolType>
     protected abstract val falseExpr: Expr<BoolType>
-    final override fun transformCandidates(ifTrue: CNFInvariantMap, ifFalse: CNFInvariantMap): CNFInvariantMap {
+    final override fun transformCandidates(ifTrue: DNFInvariantMap, ifFalse: DNFInvariantMap): DNFInvariantMap {
         val invariants = mutableSetOf<Invariant>()
         invariants += ifTrue.candidateMap.keys
         invariants += ifFalse.candidateMap.keys
@@ -49,7 +49,7 @@ abstract class LogicDecision : Decision {
         for (invariant in invariants) {
             candidateMap[invariant] = ifTrue.getOperators(invariant).andAlso(trueExpr) + ifFalse.getOperators(invariant).andAlso(falseExpr)
         }
-        return CNFInvariantMap(
+        return DNFInvariantMap(
                 ifTrue.default.andAlso(trueExpr) + ifFalse.default.andAlso(falseExpr),
                 candidateMap
         )

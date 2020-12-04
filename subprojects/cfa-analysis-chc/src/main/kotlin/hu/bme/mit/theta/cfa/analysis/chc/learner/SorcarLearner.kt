@@ -1,6 +1,6 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
-import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
+import hu.bme.mit.theta.cfa.analysis.chc.DNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
@@ -17,7 +17,7 @@ class SorcarLearner(override val name: String,
 ) : Learner {
     constructor(name: String, pattern: PredicatePattern) : this(name, listOf(pattern))
 
-    override fun suggestCandidates(constraintSystem: ConstraintSystem): CNFCandidates {
+    override fun suggestCandidates(constraintSystem: ConstraintSystem): DNFCandidates {
         val atoms = predicatePatterns.flatMap { it.findAllSplits(constraintSystem.datapoints, constraintSystem, NullError) }
         val candidates = mutableMapOf<Invariant, MutableList<Expr<BoolType>>>()
 
@@ -56,7 +56,7 @@ class SorcarLearner(override val name: String,
             }
             curCS = builder.build()
         } while (!consistent)
-        return CNFCandidates(name, listOf(), candidates.mapValues { listOf(And(it.value)) })
+        return DNFCandidates(name, listOf(), candidates.mapValues { listOf(And(it.value)) })
     }
 
     private fun isRelevant(atom: Expr<BoolType>, invariant: Invariant, constraintSystem: ConstraintSystem) =

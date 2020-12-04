@@ -1,8 +1,7 @@
 package hu.bme.mit.theta.cfa.analysis.chc.learner
 
-import hu.bme.mit.theta.cfa.analysis.chc.CNFCandidates
+import hu.bme.mit.theta.cfa.analysis.chc.DNFCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.DEBUG
-import hu.bme.mit.theta.cfa.analysis.chc.Invariant
 import hu.bme.mit.theta.cfa.analysis.chc.InvariantCandidates
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ConstraintSystem
 import hu.bme.mit.theta.cfa.analysis.chc.constraint.ContradictoryException
@@ -11,7 +10,6 @@ import hu.bme.mit.theta.cfa.analysis.chc.learner.decisiontree.*
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.LeqPattern
 import hu.bme.mit.theta.cfa.analysis.chc.learner.predicates.PredicatePattern
 import hu.bme.mit.theta.core.type.Expr
-import hu.bme.mit.theta.core.type.booltype.AndExpr
 import hu.bme.mit.theta.core.type.booltype.BoolExprs
 import hu.bme.mit.theta.core.type.booltype.BoolType
 import java.util.*
@@ -22,13 +20,13 @@ class DecisionTreeLearner(override val name: String,
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): InvariantCandidates {
         val invariantMap = DecisionTreeBuilder(constraintSystem).buildTree()
-        return CNFCandidates(name, invariantMap.default, invariantMap.candidateMap)
+        return DNFCandidates(name, invariantMap.default, invariantMap.candidateMap)
     }
 
 
     private inner class DecisionTreeBuilder(private var constraintSystem: ConstraintSystem) {
         private lateinit var root: BuildNode
-        fun buildTree(): CNFInvariantMap {
+        fun buildTree(): DNFInvariantMap {
             val toProcess = LinkedList(Collections.singleton(SetToProcess(constraintSystem.datapoints.toMutableSet(), mutableSetOf(), null)))
             do {
                 val (wholeDatapoints, splitDatapoints, parentSlot) = toProcess.removeFirst()
@@ -179,14 +177,14 @@ class DecisionTreeLearner(override val name: String,
 
 
     private interface BuildNode {
-        val invariantMap: CNFInvariantMap?
+        val invariantMap: DNFInvariantMap?
         fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean?
     }
 
     private class BranchBuildNode(val pivot: Decision, var trueChild: BuildNode, var falseChild: BuildNode) :
         BuildNode {
 
-        override val invariantMap: CNFInvariantMap?
+        override val invariantMap: DNFInvariantMap?
             get() {
                 val trueMap = trueChild.invariantMap
                 val falseMap = falseChild.invariantMap
@@ -223,7 +221,7 @@ class DecisionTreeLearner(override val name: String,
     ) : BuildNode {
         data class ParentSlot(val node: BranchBuildNode, val side: Boolean)
 
-        override val invariantMap: CNFInvariantMap?
+        override val invariantMap: DNFInvariantMap?
             get() = null
 
         override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean? {
@@ -238,12 +236,12 @@ class DecisionTreeLearner(override val name: String,
 
 
     private class LeafBuildNode(val label: Boolean) : BuildNode {
-        override val invariantMap: CNFInvariantMap
+        override val invariantMap: DNFInvariantMap
             get() =
                 if (label)
-                    CNFInvariantMap(listOf(BoolExprs.And(listOf(BoolExprs.True()))), emptyMap())
+                    DNFInvariantMap(listOf(BoolExprs.And(listOf(BoolExprs.True()))), emptyMap())
                 else
-                    CNFInvariantMap(emptyList(), emptyMap())
+                    DNFInvariantMap(emptyList(), emptyMap())
 
         override fun classifyNewDatapoint(datapoint: Datapoint, wasSplit: Boolean): Boolean = label
     }
