@@ -18,7 +18,7 @@ class SorcarLearner(override val name: String,
     constructor(name: String, pattern: PredicatePattern) : this(name, listOf(pattern))
 
     override fun suggestCandidates(constraintSystem: ConstraintSystem): DNFCandidates {
-        val atoms = predicatePatterns.flatMap { it.findAllSplits(constraintSystem.datapoints, constraintSystem, NullError) }
+        val atoms = predicatePatterns.asSequence().flatMap { it.findAllSplits(constraintSystem.datapoints, constraintSystem, NullError) }
         val candidates = mutableMapOf<Invariant, MutableList<Expr<BoolType>>>()
 
         for (invariant in constraintSystem.datapointsByInvariant.keys) {

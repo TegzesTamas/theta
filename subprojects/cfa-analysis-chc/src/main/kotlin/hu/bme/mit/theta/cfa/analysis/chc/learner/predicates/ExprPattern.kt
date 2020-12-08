@@ -11,28 +11,28 @@ import java.util.*
 
 abstract class ExprPattern : PredicatePattern {
 
-    abstract val atoms: Iterable<Expr<BoolType>>
+    abstract val atoms: Sequence<Expr<BoolType>>
 
-    override fun findAllSplits(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): PriorityQueue<Split> {
-        val splits = PriorityQueue<Split>()
-
-        for (atom in atoms) {
+    override fun findAllSplits(
+        datapointsToSplit: Set<Datapoint>,
+        constraintSystem: ConstraintSystem,
+        measure: ImpurityMeasure
+    ): Sequence<Split> =
+        atoms.map { atom ->
             val decision = ExprDecision(atom)
             val trueDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeTrue(it) }
             val falseDatapoints = datapointsToSplit.filterTo(mutableSetOf()) { decision.datapointCanBeFalse(it) }
             val trueError = measure.impurity(
-                    trueDatapoints.count { constraintSystem.forcedTrue.contains(it) },
-                    trueDatapoints.count { constraintSystem.forcedFalse.contains(it) },
-                    trueDatapoints.count()
+                trueDatapoints.count { constraintSystem.forcedTrue.contains(it) },
+                trueDatapoints.count { constraintSystem.forcedFalse.contains(it) },
+                trueDatapoints.count()
             )
             val falseError = measure.impurity(
-                    falseDatapoints.count { constraintSystem.forcedTrue.contains(it) },
-                    falseDatapoints.count { constraintSystem.forcedFalse.contains(it) },
-                    falseDatapoints.count()
+                falseDatapoints.count { constraintSystem.forcedTrue.contains(it) },
+                falseDatapoints.count { constraintSystem.forcedFalse.contains(it) },
+                falseDatapoints.count()
             )
             val error = trueError + falseError
-            splits.add(Split(atom, error))
+            return@map Split(atom, error)
         }
-        return splits
-    }
 }

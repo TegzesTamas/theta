@@ -13,12 +13,6 @@ fun <T : Type> removePrimes(expr: Expr<T>): Expr<T> {
     }
 }
 
-fun <T : Type> getSubexprsOfType(type: T, exprs: Iterable<Expr<*>>): List<Expr<T>> {
-    val destination = mutableListOf<Expr<T>>()
-    collectSubexprsOfType(type, exprs, destination)
-    return destination
-}
-
 fun <T : Type> collectSubexprsOfType(type: T, exprs: Iterable<Expr<*>>, destination: MutableCollection<Expr<T>>) {
     val toProcess = exprs.toMutableList()
     while (toProcess.isNotEmpty()) {
@@ -28,6 +22,23 @@ fun <T : Type> collectSubexprsOfType(type: T, exprs: Iterable<Expr<*>>, destinat
             destination.add(casted)
         } catch (e: ClassCastException) {
             toProcess.addAll(expr.ops)
+        }
+    }
+}
+
+fun <T : Type> getSubexprsOfTypeAsSequence(type: T, exprs: Iterable<Expr<*>>): Sequence<Expr<T>> {
+    val iterator = exprs.iterator()
+    val storage = mutableListOf<Expr<T>>()
+    return generateSequence {
+        if (storage.isNotEmpty()) {
+            return@generateSequence storage.removeLast()
+        } else {
+            if (!iterator.hasNext()) {
+                return@generateSequence null
+            } else {
+                collectSubexprsOfType(type, listOf(iterator.next()), storage)
+                return@generateSequence storage.removeLast()
+            }
         }
     }
 }

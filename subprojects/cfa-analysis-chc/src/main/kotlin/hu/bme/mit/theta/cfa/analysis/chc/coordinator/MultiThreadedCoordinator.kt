@@ -91,14 +91,8 @@ class MultiThreadedCoordinator(
         try {
             val csBuilder = ConstraintSystem.Builder()
             while (true) {
-                val drainedResults = mutableListOf<TeacherResult>()
-                teacherOutputQueue.drainTo(drainedResults)
-                val teacherResults =
-                        if (drainedResults.isEmpty()) {
-                            listOf(teacherOutputQueue.take())
-                        } else {
-                            drainedResults
-                        }
+                val teacherResults = mutableListOf<TeacherResult>(teacherOutputQueue.take())
+                teacherOutputQueue.drainTo(teacherResults)
                 for ((candidates, constraints) in teacherResults) {
                     if (constraints == null) {
                         return candidates

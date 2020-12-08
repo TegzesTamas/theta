@@ -14,41 +14,95 @@ object LeqPattern : PredicatePattern {
     private data class VariableOccurrence(val variable: Decl<IntType>, val lit: IntLitExpr, val datapoint: Datapoint)
     private data class ForcedLabeling(val mustBeTrue: Int, val mustBeFalse: Int)
 
-    override fun findAllSplits(datapointsToSplit: Set<Datapoint>, constraintSystem: ConstraintSystem, measure: ImpurityMeasure): PriorityQueue<Split> {
+    override fun findAllSplits(
+        datapointsToSplit: Set<Datapoint>,
+        constraintSystem: ConstraintSystem,
+        measure: ImpurityMeasure
+    ): Sequence<Split> {
         val variableToOccurrences = datapointsToSplit.asSequence()
-                .flatMap { datapoint ->
-                    datapoint.valuation.toMap()
-                            .asSequence()
-                            .mapNotNull { (variable, value) ->
-                                (value as? IntLitExpr)?.let {
-                                    @Suppress("UNCHECKED_CAST")
-                                    (VariableOccurrence(variable as Decl<IntType>, it, datapoint))
-                                } //TODO BitVector support
-                            }
-                }
-                .groupBy { it.variable }
-                .asSequence()
-                .map { (variable, occurrences) -> variable to occurrences.groupBy { it.lit } }
+            .flatMap { datapoint ->
+                datapoint.valuation.toMap()
+                    .asSequence()
+                    .mapNotNull { (variable, value) ->
+                        (value as? IntLitExpr)?.let {
+                            @Suppress("UNCHECKED_CAST")
+                            (VariableOccurrence(variable as Decl<IntType>, it, datapoint))
+                        } //TODO BitVector support
+                    }
+            }
+            .groupBy { it.variable }
+            .asSequence()
+            .map { (variable, occurrences) -> variable to occurrences.groupBy { it.lit } }
 
         val splits = PriorityQueue<Split>()
 
         for ((variable, occurrences) in variableToOccurrences) {
             if (occurrences.size > 1) {
-                collectAllSplitsForVariable(splits, variable, occurrences,
-                        datapointsToSplit, constraintSystem, measure)
+                collectAllSplitsForVariable(
+                    splits, variable, occurrences,
+                    datapointsToSplit, constraintSystem, measure
+                )
             }
         }
 
+        return variableToOccurrences.flatMap { (variable, occurrences) ->
+            getAllSplitsForVariable(variable, occurrences, datapointsToSplit, constraintSystem, measure).asSequence()
+        }
+    }
+
+    override fun findBestSplit(
+        datapointsToSplit: Set<Datapoint>,
+        constraintSystem: ConstraintSystem,
+        measure: ImpurityMeasure
+    ): Split? {
+        val variableToOccurrences = datapointsToSplit.asSequence()
+            .flatMap { datapoint ->
+                datapoint.valuation.toMap()
+                    .asSequence()
+                    .mapNotNull { (variable, value) ->
+                        (value as? IntLitExpr)?.let {
+                            @Suppress("UNCHECKED_CAST")
+                            (VariableOccurrence(variable as Decl<IntType>, it, datapoint))
+                        } //TODO BitVector support
+                    }
+            }
+            .groupBy { it.variable }
+            .asSequence()
+            .map { (variable, occurrences) -> variable to occurrences.groupBy { it.lit } }
+
+        val splits = PriorityQueue<Split>()
+
+        for ((variable, occurrences) in variableToOccurrences) {
+            if (occurrences.size > 1) {
+                collectAllSplitsForVariable(
+                    splits, variable, occurrences,
+                    datapointsToSplit, constraintSystem, measure
+                )
+            }
+        }
+
+        return splits.peek()
+    }
+
+    private fun getAllSplitsForVariable(
+        variable: Decl<IntType>,
+        occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
+        datapointsToSplit: Set<Datapoint>,
+        constraintSystem: ConstraintSystem,
+        measure: ImpurityMeasure
+    ): List<Split> {
+        val splits = mutableListOf<Split>()
+        collectAllSplitsForVariable(splits, variable, occurrencesByLit, datapointsToSplit, constraintSystem, measure)
         return splits
     }
 
     private fun collectAllSplitsForVariable(
-            splits: MutableCollection<Split>,
-            variable: Decl<IntType>,
-            occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
-            datapointsToSplit: Set<Datapoint>,
-            constraintSystem: ConstraintSystem,
-            measure: ImpurityMeasure
+        splits: MutableCollection<Split>,
+        variable: Decl<IntType>,
+        occurrencesByLit: Map<IntLitExpr, List<VariableOccurrence>>,
+        datapointsToSplit: Set<Datapoint>,
+        constraintSystem: ConstraintSystem,
+        measure: ImpurityMeasure
     ) {
         //In splittableDps, every datapoint occurs at most once, because it assigns at most one value to a variable
         val splittableDps = occurrencesByLit.values.flatMap { it.map { occurrence -> occurrence.datapoint } }
@@ -84,13 +138,13 @@ object LeqPattern : PredicatePattern {
             splits.add(Split(IntExprs.Leq(variable.ref, lit), leqError))
 
             val eqError = measure.impurity(
-                    currentTrue + unsplittableTrue,
-                    currentFalse + unsplittableFalse,
-                    currentOccurrences.size + unsplittableDps.size
+                currentTrue + unsplittableTrue,
+                currentFalse + unsplittableFalse,
+                currentOccurrences.size + unsplittableDps.size
             ) + measure.impurity(
-                    splittableTrue - currentTrue + unsplittableTrue,
-                    splittableFalse - currentFalse + unsplittableFalse,
-                    splittableDps.size - currentOccurrences.size + unsplittableDps.size
+                splittableTrue - currentTrue + unsplittableTrue,
+                splittableFalse - currentFalse + unsplittableFalse,
+                splittableDps.size - currentOccurrences.size + unsplittableDps.size
             )
 
             splits.add(Split(IntExprs.Eq(variable.ref, lit), eqError))
