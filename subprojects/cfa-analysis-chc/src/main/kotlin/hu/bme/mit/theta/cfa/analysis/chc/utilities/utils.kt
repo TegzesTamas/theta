@@ -30,16 +30,14 @@ fun <T : Type> getSubexprsOfTypeAsSequence(type: T, exprs: Iterable<Expr<*>>): S
     val iterator = exprs.iterator()
     val storage = mutableListOf<Expr<T>>()
     return generateSequence {
-        if (storage.isNotEmpty()) {
-            return@generateSequence storage.removeLast()
-        } else {
+        while (storage.isEmpty()) {
             if (!iterator.hasNext()) {
                 return@generateSequence null
             } else {
                 collectSubexprsOfType(type, listOf(iterator.next()), storage)
-                return@generateSequence storage.removeLast()
             }
         }
+        return@generateSequence storage.removeLast()
     }
 }
 
